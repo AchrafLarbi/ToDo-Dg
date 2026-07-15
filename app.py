@@ -266,7 +266,11 @@ def changer_statut(id):
 
 @app.route('/taches/<int:id>/relancer', methods=['POST'])
 def relancer_tache(id):
-    success, message = email_utils.send_reminder(id, 'manuelle')
+    try:
+        success, message = email_utils.send_reminder(id, 'manuelle')
+    except Exception as exc:
+        app.logger.exception("Erreur inattendue lors de la relance de la tache %s", id)
+        success, message = False, f"Erreur inattendue : {exc}"
     flash(message, 'success' if success else 'danger')
     return redirect(url_for('detail_tache', id=id))
 
@@ -360,6 +364,7 @@ def parametres():
             'smtp_user': request.form['smtp_user'].strip(),
             'smtp_password': request.form.get('smtp_password', '').strip(),
             'sender_name': request.form['sender_name'].strip(),
+            'sender_email': request.form.get('sender_email', '').strip(),
             'reminder_days_before': int(request.form['reminder_days_before']),
             'daily_check_hour': int(request.form['daily_check_hour']),
             'auto_reminders_enabled': 1 if request.form.get('auto_reminders_enabled') else 0,
@@ -373,7 +378,11 @@ def parametres():
 
 @app.route('/parametres/test-email', methods=['POST'])
 def test_email():
-    success, message = email_utils.send_test_email()
+    try:
+        success, message = email_utils.send_test_email()
+    except Exception as exc:  # garde-fou ultime : jamais de 500 sur cette page
+        app.logger.exception("Erreur inattendue lors de l'envoi de l'email de test")
+        success, message = False, f"Erreur inattendue : {exc}"
     flash(message, 'success' if success else 'danger')
     return redirect(url_for('parametres'))
 

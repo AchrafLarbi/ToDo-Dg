@@ -3,11 +3,34 @@
 <h1>Parametres</h1>
 
 <div class="card">
-  <h2 style="margin-top:0;">Envoi d'emails (Outlook / Office 365)</h2>
+  <h2 style="margin-top:0;">Envoi d'emails (Brevo recommande, ou Outlook / Office 365)</h2>
+  <p class="muted" style="border-left:3px solid #2e7d32; padding-left:0.6rem;">
+    <b>Recommande : Brevo</b> (gratuit, 300 emails/jour, fonctionne partout).
+    1) Creez un compte sur <b>brevo.com</b>.
+    2) Verifiez votre adresse d'envoi dans <b>Expediteurs &amp; IP &gt; Expediteurs</b>
+       (vous recevez un email de confirmation a cliquer).
+    3) Recuperez vos identifiants SMTP dans <b>SMTP &amp; API &gt; SMTP</b>.
+    4) Reportez-les ci-dessous :
+    <b>Serveur</b> = smtp-relay.brevo.com &nbsp;·&nbsp; <b>Port</b> = 587 &nbsp;·&nbsp;
+    <b>Login SMTP</b> = celui affiche par Brevo (ex. 8a1b2c001@smtp-brevo.com) &nbsp;·&nbsp;
+    <b>Mot de passe / cle SMTP</b> = la « SMTP key » Brevo (pas le mot de passe du compte) &nbsp;·&nbsp;
+    <b>Adresse expediteur (From)</b> = votre adresse verifiee (ex. hm.mokhtari@esi-sba.dz).
+  </p>
   <p class="muted">
-    Serveur : smtp.office365.com, port 587. Utilisez votre adresse Outlook et un
-    <b>mot de passe d'application</b> (recommande si la double authentification est activee) :
-    creez-le sur account.microsoft.com &gt; Securite &gt; Options de securite avancees &gt; Mots de passe d'application.
+    <b>Outlook / Office 365 :</b> Serveur = smtp.office365.com, port 587 (ou 465 en SSL).
+    Login SMTP = votre adresse Outlook, mot de passe = un <b>mot de passe d'application</b>,
+    et laissez « Adresse expediteur » vide (elle vaut alors le login).
+  </p>
+  <p class="muted" style="border-left:3px solid #d9822b; padding-left:0.6rem;">
+    <b>Erreur 535 « Authentication unsuccessful » ?</b> Le serveur refuse l'authentification.
+    Causes possibles : (1) le mot de passe n'est pas un <b>mot de passe d'application</b> ;
+    (2) l'option <b>« SMTP authentifie »</b> est desactivee pour votre boite -- frequent sur les
+    comptes d'etablissement (esi-sba.dz, universites...). Dans ce cas, demandez a
+    l'administrateur d'activer le SMTP authentifie, <b>ou</b> utilisez un fournisseur d'envoi
+    dedie qui fonctionne partout : <b>Brevo</b> (smtp-relay.brevo.com, port 587),
+    <b>SendGrid</b> (smtp.sendgrid.net, port 587) ou <b>Gmail</b> (smtp.gmail.com, port 465,
+    avec un mot de passe d'application Google). Renseignez simplement le serveur, le port et les
+    identifiants correspondants ci-dessous.
   </p>
   <form method="post" action="{{ url_for('parametres') }}" class="form-grid">
     <div>
@@ -19,12 +42,16 @@
       <input type="number" name="smtp_port" value="{{ settings.smtp_port }}" required>
     </div>
     <div>
-      <label>Adresse email Outlook</label>
-      <input type="email" name="smtp_user" value="{{ settings.smtp_user or '' }}" required>
+      <label>Login SMTP</label>
+      <input type="text" name="smtp_user" value="{{ settings.smtp_user or '' }}" placeholder="ex. 8a1b2c001@smtp-brevo.com ou votre adresse Outlook" required>
     </div>
     <div>
-      <label>Mot de passe d'application</label>
-      <input type="password" name="smtp_password" placeholder="{{ '(deja enregistre, laisser vide pour garder)' if settings.smtp_password else 'Mot de passe' }}">
+      <label>Mot de passe / cle SMTP</label>
+      <input type="password" name="smtp_password" placeholder="{{ '(deja enregistre, laisser vide pour garder)' if settings.smtp_password else 'Cle SMTP Brevo ou mot de passe d application' }}">
+    </div>
+    <div>
+      <label>Adresse email expediteur (From)</label>
+      <input type="email" name="sender_email" value="{{ settings.sender_email or '' }}" placeholder="votre adresse verifiee, ex. hm.mokhtari@esi-sba.dz">
     </div>
     <div>
       <label>Nom affiche comme expediteur</label>
@@ -56,7 +83,7 @@
   <form method="post" action="{{ url_for('test_email') }}">
     <button type="submit" class="btn btn-secondary">Envoyer un email de test</button>
   </form>
-  <p class="help-text">L'email de test est envoye a votre propre adresse ({{ settings.smtp_user or 'non configuree' }}).</p>
+  <p class="help-text">L'email de test est envoye a votre adresse expediteur ({{ settings.sender_email or settings.smtp_user or 'non configuree' }}).</p>
 </div>
 
 <form method="post" action="{{ url_for('logout') }}">

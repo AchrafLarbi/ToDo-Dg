@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS settings (
     smtp_user TEXT,
     smtp_password TEXT,
     sender_name TEXT DEFAULT 'Gestion des taches',
+    sender_email TEXT,
     reminder_days_before INTEGER DEFAULT 2,
     daily_check_hour INTEGER DEFAULT 8,
     auto_reminders_enabled INTEGER DEFAULT 1,
@@ -98,6 +99,9 @@ def init_db():
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(SCHEMA)
+        # Migration pour les bases creees avant l'ajout de l'adresse expediteur
+        # distincte du login SMTP (necessaire pour Brevo, SendGrid, etc.).
+        cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_email TEXT")
         cur.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
     conn.commit()
     conn.close()
@@ -120,19 +124,21 @@ def update_settings(data):
         if data.get('smtp_password'):
             cur.execute(
                 """UPDATE settings SET smtp_host=%s, smtp_port=%s, smtp_user=%s, smtp_password=%s,
-                   sender_name=%s, reminder_days_before=%s, daily_check_hour=%s,
+                   sender_name=%s, sender_email=%s, reminder_days_before=%s, daily_check_hour=%s,
                    auto_reminders_enabled=%s, base_url=%s WHERE id=1""",
                 (data['smtp_host'], data['smtp_port'], data['smtp_user'], data['smtp_password'],
-                 data['sender_name'], data['reminder_days_before'], data['daily_check_hour'],
+                 data['sender_name'], data.get('sender_email') or None,
+                 data['reminder_days_before'], data['daily_check_hour'],
                  data['auto_reminders_enabled'], data['base_url']),
             )
         else:
             cur.execute(
                 """UPDATE settings SET smtp_host=%s, smtp_port=%s, smtp_user=%s,
-                   sender_name=%s, reminder_days_before=%s, daily_check_hour=%s,
+                   sender_name=%s, sender_email=%s, reminder_days_before=%s, daily_check_hour=%s,
                    auto_reminders_enabled=%s, base_url=%s WHERE id=1""",
                 (data['smtp_host'], data['smtp_port'], data['smtp_user'],
-                 data['sender_name'], data['reminder_days_before'], data['daily_check_hour'],
+                 data['sender_name'], data.get('sender_email') or None,
+                 data['reminder_days_before'], data['daily_check_hour'],
                  data['auto_reminders_enabled'], data['base_url']),
             )
     conn.commit()
