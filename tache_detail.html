@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="top-bar">
+  <h1>{{ task.title }}</h1>
+  <a class="btn btn-secondary" href="{{ url_for('taches') }}">Retour a la liste</a>
+</div>
+
+<div class="badges-line" style="margin-bottom:1rem;">
+  <span class="badge badge-{{ task.priority|slugify }}">Priorite : {{ task.priority }}</span>
+  <span class="badge badge-{{ task.sensitivity|slugify }}">Sensibilite : {{ task.sensitivity }}</span>
+  <span class="badge badge-{{ task.status|slugify }}">Statut : {{ task.status }}</span>
+  {{ deadline_badge(task) }}
+</div>
+
+<form method="post" action="{{ url_for('modifier_tache', id=task.id) }}" class="form-grid">
+  <div class="full-width">
+    <label>Titre</label>
+    <input type="text" name="title" value="{{ task.title }}" required>
+  </div>
+  <div>
+    <label>Projet</label>
+    <select name="project_id">
+      <option value="">-- Aucun --</option>
+      {% for p in projets %}
+        <option value="{{ p.id }}" {{ 'selected' if task.project_id == p.id }}>{{ p.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Collaborateur assigne</label>
+    <select name="collaborator_id">
+      <option value="">-- Non assigne --</option>
+      {% for c in collaborateurs %}
+        <option value="{{ c.id }}" {{ 'selected' if task.collaborator_id == c.id }}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Priorite</label>
+    <select name="priority">
+      {% for p in PRIORITIES %}
+        <option value="{{ p }}" {{ 'selected' if task.priority == p }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Sensibilite</label>
+    <select name="sensitivity">
+      {% for s in SENSITIVITIES %}
+        <option value="{{ s }}" {{ 'selected' if task.sensitivity == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Echeance</label>
+    <input type="date" name="due_date" value="{{ task.due_date or '' }}">
+  </div>
+  <div class="full-width">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{ task.description or '' }}</textarea>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">Enregistrer</button>
+  </div>
+</form>
+
+<div class="card">
+  <h2 style="margin-top:0;">Changer le statut</h2>
+  <form method="post" action="{{ url_for('changer_statut', id=task.id) }}">
+    <div class="actions-row">
+      {% for s in STATUSES %}
+        <button type="submit" name="status" value="{{ s }}" class="btn btn-small {{ 'btn-secondary' if s == task.status }}">{{ s }}</button>
+      {% endfor %}
+    </div>
+    <div style="margin-top:0.8rem;">
+      <label class="help-text" style="margin:0 0 0.3rem 0;">Commentaire de cloture (utilise si vous passez a Terminee/Cloturee)</label>
+      <textarea name="closure_comment" rows="2" style="width:100%; padding:0.5rem; border-radius:6px; border:1px solid #d1d5db;">{{ task.closure_comment or '' }}</textarea>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Relance manuelle</h2>
+  {% if task.collaborator_email %}
+    <p class="muted">Destinataire : {{ task.collaborator_name }} ({{ task.collaborator_email }}) &mdash; {{ task.reminder_count }} relance(s) envoyee(s) au total.</p>
+    <form method="post" action="{{ url_for('relancer_tache', id=task.id) }}">
+      <button type="submit" class="btn">Envoyer une relance maintenant</button>
+    </form>
+  {% else %}
+    <p class="muted">Aucun collaborateur avec email n'est assigne a cette tache.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Historique des emails</h2>
+  {% if reminders %}
+  <ul class="reminders-list">
+    {% for r in reminders %}
+      <li>
+        <span class="{{ 'ok' if r.success else 'ko' }}">{{ 'OK' if r.success else 'ECHEC' }}</span>
+        &mdash; {{ r.type }} &mdash; {{ r.sent_at }} &mdash; {{ r.message }}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Aucun email envoye pour cette tache.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0;">Mises a jour du collaborateur</h2>
+  {% if updates %}
+  <ul class="reminders-list">
+    {% for u in updates %}
+      <li>
+        {{ u.created_at }} &mdash; statut : {{ u.previous_status }} &rarr; {{ u.new_status }}
+        {% if u.previous_due_date != u.new_due_date %} &mdash; echeance : {{ u.previous_due_date or '-' }} &rarr; {{ u.new_due_date or '-' }}{% endif %}
+        {% if u.comment %}<br><span class="muted">&ldquo;{{ u.comment }}&rdquo;</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Aucune mise a jour du collaborateur pour cette tache.</p>
+  {% endif %}
+</div>
+
+<form method="post" action="{{ url_for('supprimer_tache', id=task.id) }}"
+      onsubmit="return confirm('Supprimer definitivement cette tache ?');">
+  <button type="submit" class="btn btn-danger btn-small">Supprimer cette tache</button>
+</form>
+{% endblock %}

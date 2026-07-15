@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Parametres</h1>
+
+<div class="card">
+  <h2 style="margin-top:0;">Envoi d'emails (Outlook / Office 365)</h2>
+  <p class="muted">
+    Serveur : smtp.office365.com, port 587. Utilisez votre adresse Outlook et un
+    <b>mot de passe d'application</b> (recommande si la double authentification est activee) :
+    creez-le sur account.microsoft.com &gt; Securite &gt; Options de securite avancees &gt; Mots de passe d'application.
+  </p>
+  <form method="post" action="{{ url_for('parametres') }}" class="form-grid">
+    <div>
+      <label>Serveur SMTP</label>
+      <input type="text" name="smtp_host" value="{{ settings.smtp_host }}" required>
+    </div>
+    <div>
+      <label>Port</label>
+      <input type="number" name="smtp_port" value="{{ settings.smtp_port }}" required>
+    </div>
+    <div>
+      <label>Adresse email Outlook</label>
+      <input type="email" name="smtp_user" value="{{ settings.smtp_user or '' }}" required>
+    </div>
+    <div>
+      <label>Mot de passe d'application</label>
+      <input type="password" name="smtp_password" placeholder="{{ '(deja enregistre, laisser vide pour garder)' if settings.smtp_password else 'Mot de passe' }}">
+    </div>
+    <div>
+      <label>Nom affiche comme expediteur</label>
+      <input type="text" name="sender_name" value="{{ settings.sender_name }}" required>
+    </div>
+    <div class="full-width">
+      <label>URL publique de l'application (necessaire pour les liens dans les emails)</label>
+      <input type="text" name="base_url" value="{{ settings.base_url or '' }}" placeholder="https://votre-app.onrender.com">
+    </div>
+    <div>
+      <label>Relancer X jour(s) avant l'echeance</label>
+      <input type="number" name="reminder_days_before" value="{{ settings.reminder_days_before }}" min="0" required>
+    </div>
+    <div>
+      <label>Heure de verification automatique quotidienne (0-23)</label>
+      <input type="number" name="daily_check_hour" value="{{ settings.daily_check_hour }}" min="0" max="23" required>
+    </div>
+    <div>
+      <label style="display:flex; align-items:center; gap:0.4rem;">
+        <input type="checkbox" name="auto_reminders_enabled" style="width:auto;" {{ 'checked' if settings.auto_reminders_enabled }}>
+        Activer les relances automatiques quotidiennes
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Enregistrer les parametres</button>
+    </div>
+  </form>
+
+  <form method="post" action="{{ url_for('test_email') }}">
+    <button type="submit" class="btn btn-secondary">Envoyer un email de test</button>
+  </form>
+  <p class="help-text">L'email de test est envoye a votre propre adresse ({{ settings.smtp_user or 'non configuree' }}).</p>
+</div>
+
+<form method="post" action="{{ url_for('logout') }}">
+  <button type="submit" class="btn btn-secondary">Se deconnecter</button>
+</form>
+{% endblock %}

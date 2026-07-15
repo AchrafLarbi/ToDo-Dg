@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connexion - Gestion des Taches</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<main class="container" style="max-width:380px; margin-top:4rem;">
+  <h1>Gestion des Taches</h1>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  <form method="post" class="form-grid">
+    <div class="full-width">
+      <label>Mot de passe administrateur</label>
+      <input type="password" name="password" required autofocus>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn">Se connecter</button>
+    </div>
+  </form>
+</main>
+</body>
+</html>

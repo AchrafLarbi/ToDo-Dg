@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Taches</h1>
+
+<form method="post" action="{{ url_for('ajouter_tache') }}" class="form-grid">
+  <div class="full-width">
+    <label>Titre de la tache</label>
+    <input type="text" name="title" required>
+  </div>
+  <div>
+    <label>Projet</label>
+    <select name="project_id">
+      <option value="">-- Aucun --</option>
+      {% for p in projets %}
+        <option value="{{ p.id }}">{{ p.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Collaborateur assigne</label>
+    <select name="collaborator_id">
+      <option value="">-- Non assigne --</option>
+      {% for c in collaborateurs %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Priorite</label>
+    <select name="priority">
+      {% for p in PRIORITIES %}
+        <option value="{{ p }}" {{ 'selected' if p == 'Normale' }}>{{ p }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Sensibilite</label>
+    <select name="sensitivity">
+      {% for s in SENSITIVITIES %}
+        <option value="{{ s }}" {{ 'selected' if s == 'Normale' }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label>Echeance</label>
+    <input type="date" name="due_date">
+  </div>
+  <div class="full-width">
+    <label>Description</label>
+    <textarea name="description" rows="2"></textarea>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">Creer la tache</button>
+  </div>
+</form>
+<p class="help-text">Si un collaborateur est assigne, un email de notification lui est envoye automatiquement.</p>
+
+<form method="get" action="{{ url_for('taches') }}" class="filters-bar">
+  <select name="project_id" onchange="this.form.submit()">
+    <option value="">Tous les projets</option>
+    {% for p in projets %}
+      <option value="{{ p.id }}" {{ 'selected' if filters.project_id == p.id|string }}>{{ p.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="collaborator_id" onchange="this.form.submit()">
+    <option value="">Tous les collaborateurs</option>
+    {% for c in collaborateurs %}
+      <option value="{{ c.id }}" {{ 'selected' if filters.collaborator_id == c.id|string }}>{{ c.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="status" onchange="this.form.submit()">
+    <option value="">Tous les statuts</option>
+    {% for s in STATUSES %}
+      <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s }}</option>
+    {% endfor %}
+  </select>
+  <select name="priority" onchange="this.form.submit()">
+    <option value="">Toutes les priorites</option>
+    {% for p in PRIORITIES %}
+      <option value="{{ p }}" {{ 'selected' if filters.priority == p }}>{{ p }}</option>
+    {% endfor %}
+  </select>
+  <a class="btn btn-small btn-secondary" href="{{ url_for('taches') }}">Reinitialiser</a>
+</form>
+
+{% if tasks %}
+<table class="table">
+  <thead><tr><th>Titre</th><th>Projet</th><th>Collaborateur</th><th>Priorite</th><th>Sensibilite</th><th>Echeance</th><th>Statut</th><th></th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+    <tr class="{{ 'overdue-row' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee'] else '' }}">
+      <td><a href="{{ url_for('detail_tache', id=t.id) }}">{{ t.title }}</a></td>
+      <td>{{ t.project_name or '-' }}</td>
+      <td>{{ t.collaborator_name or '-' }}</td>
+      <td><span class="badge badge-{{ t.priority|slugify }}">{{ t.priority }}</span></td>
+      <td><span class="badge badge-{{ t.sensitivity|slugify }}">{{ t.sensitivity }}</span></td>
+      <td>{{ t.due_date or '-' }} {{ deadline_badge(t) }}</td>
+      <td><span class="badge badge-{{ t.status|slugify }}">{{ t.status }}</span></td>
+      <td><a class="btn btn-small" href="{{ url_for('detail_tache', id=t.id) }}">Voir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Aucune tache ne correspond a ces filtres.</p>
+{% endif %}
+{% endblock %}

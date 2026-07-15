@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi de tache - Gestion des Taches</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<nav class="navbar">
+  <div class="navbar-brand">Gestion des Taches</div>
+</nav>
+<main class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if not task %}
+    <h1>Lien invalide</h1>
+    <p class="muted">Ce lien de suivi de tache n'est plus valide.</p>
+  {% else %}
+    <h1>{{ task.title }}</h1>
+    <div class="badges-line" style="margin-bottom:1rem;">
+      <span class="badge badge-{{ task.priority|slugify }}">Priorite : {{ task.priority }}</span>
+      <span class="badge badge-{{ task.sensitivity|slugify }}">Sensibilite : {{ task.sensitivity }}</span>
+      <span class="badge badge-{{ task.status|slugify }}">Statut : {{ task.status }}</span>
+      {{ deadline_badge(task) }}
+    </div>
+
+    <div class="card">
+      <p><b>Projet :</b> {{ task.project_name or '-' }}</p>
+      <p><b>Echeance actuelle :</b> {{ task.due_date or 'non definie' }}</p>
+      {% if task.description %}<p><b>Description :</b> {{ task.description }}</p>{% endif %}
+    </div>
+
+    <div class="card">
+      <h2 style="margin-top:0;">Mettre a jour cette tache</h2>
+      <form method="post" action="{{ url_for('tache_publique_soumettre', token=token) }}" class="form-grid">
+        <div>
+          <label>Nouveau statut</label>
+          <select name="status">
+            {% for s in STATUSES %}
+              <option value="{{ s }}" {{ 'selected' if task.status == s }}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label>Nouvelle echeance (optionnel)</label>
+          <input type="date" name="due_date" value="{{ task.due_date or '' }}">
+        </div>
+        <div class="full-width">
+          <label>Expliquer la situation (retard, blocage, avancement...)</label>
+          <textarea name="comment" rows="3" placeholder="Votre commentaire..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn">Envoyer la mise a jour</button>
+        </div>
+      </form>
+    </div>
+  {% endif %}
+</main>
+</body>
+</html>

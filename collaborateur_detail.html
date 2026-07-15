@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="top-bar">
+  <h1>{{ collaborateur.name }}</h1>
+  <a class="btn btn-secondary" href="{{ url_for('collaborateurs') }}">Retour a la liste</a>
+</div>
+
+<form method="post" action="{{ url_for('modifier_collaborateur', id=collaborateur.id) }}" class="form-grid">
+  <div>
+    <label>Nom</label>
+    <input type="text" name="name" value="{{ collaborateur.name }}" required>
+  </div>
+  <div>
+    <label>Email</label>
+    <input type="email" name="email" value="{{ collaborateur.email }}" required>
+  </div>
+  <div>
+    <label>Telephone</label>
+    <input type="text" name="phone" value="{{ collaborateur.phone or '' }}">
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">Enregistrer</button>
+  </div>
+</form>
+
+<form method="post" action="{{ url_for('supprimer_collaborateur', id=collaborateur.id) }}"
+      onsubmit="return confirm('Supprimer ce collaborateur ? Ses taches seront desassignees.');">
+  <button type="submit" class="btn btn-danger btn-small">Supprimer ce collaborateur</button>
+</form>
+
+<h2>Taches assignees</h2>
+{% if tasks %}
+<table class="table">
+  <thead><tr><th>Titre</th><th>Projet</th><th>Priorite</th><th>Sensibilite</th><th>Echeance</th><th>Statut</th><th></th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+    <tr class="{{ 'overdue-row' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee'] else '' }}">
+      <td><a href="{{ url_for('detail_tache', id=t.id) }}">{{ t.title }}</a></td>
+      <td>{{ t.project_name or '-' }}</td>
+      <td><span class="badge badge-{{ t.priority|slugify }}">{{ t.priority }}</span></td>
+      <td><span class="badge badge-{{ t.sensitivity|slugify }}">{{ t.sensitivity }}</span></td>
+      <td>{{ t.due_date or '-' }} {{ deadline_badge(t) }}</td>
+      <td><span class="badge badge-{{ t.status|slugify }}">{{ t.status }}</span></td>
+      <td><a class="btn btn-small" href="{{ url_for('detail_tache', id=t.id) }}">Voir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Aucune tache assignee a ce collaborateur.</p>
+{% endif %}
+{% endblock %}

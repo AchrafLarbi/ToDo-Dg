@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Projets</h1>
+
+<form method="post" action="{{ url_for('ajouter_projet') }}" class="form-grid">
+  <div>
+    <label>Nom du projet</label>
+    <input type="text" name="name" required>
+  </div>
+  <div>
+    <label>Date de debut</label>
+    <input type="date" name="start_date">
+  </div>
+  <div>
+    <label>Echeance (deadline)</label>
+    <input type="date" name="deadline">
+  </div>
+  <div>
+    <label>Statut</label>
+    <select name="status">
+      <option value="En cours">En cours</option>
+      <option value="En pause">En pause</option>
+      <option value="Termine">Termine</option>
+    </select>
+  </div>
+  <div class="full-width">
+    <label>Description</label>
+    <textarea name="description" rows="2"></textarea>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">Creer le projet</button>
+  </div>
+</form>
+
+{% if projets %}
+<table class="table">
+  <thead><tr><th>Nom</th><th>Statut</th><th>Debut</th><th>Echeance</th><th></th></tr></thead>
+  <tbody>
+  {% for p in projets %}
+    <tr class="{{ 'overdue-row' if p.deadline and p.deadline < today and p.status != 'Termine' else '' }}">
+      <td><a href="{{ url_for('detail_projet', id=p.id) }}">{{ p.name }}</a></td>
+      <td>{{ p.status }}</td>
+      <td>{{ p.start_date or '-' }}</td>
+      <td>{{ p.deadline or '-' }}</td>
+      <td><a class="btn btn-small" href="{{ url_for('detail_projet', id=p.id) }}">Ouvrir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Aucun projet pour le moment.</p>
+{% endif %}
+{% endblock %}

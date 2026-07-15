@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="top-bar">
+  <h1>{{ projet.name }}</h1>
+  <a class="btn btn-secondary" href="{{ url_for('projets') }}">Retour a la liste</a>
+</div>
+
+<form method="post" action="{{ url_for('modifier_projet', id=projet.id) }}" class="form-grid">
+  <div>
+    <label>Nom du projet</label>
+    <input type="text" name="name" value="{{ projet.name }}" required>
+  </div>
+  <div>
+    <label>Date de debut</label>
+    <input type="date" name="start_date" value="{{ projet.start_date or '' }}">
+  </div>
+  <div>
+    <label>Echeance (deadline)</label>
+    <input type="date" name="deadline" value="{{ projet.deadline or '' }}">
+  </div>
+  <div>
+    <label>Statut</label>
+    <select name="status">
+      <option value="En cours" {{ 'selected' if projet.status == 'En cours' }}>En cours</option>
+      <option value="En pause" {{ 'selected' if projet.status == 'En pause' }}>En pause</option>
+      <option value="Termine" {{ 'selected' if projet.status == 'Termine' }}>Termine</option>
+    </select>
+  </div>
+  <div class="full-width">
+    <label>Description</label>
+    <textarea name="description" rows="3">{{ projet.description or '' }}</textarea>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn">Enregistrer</button>
+  </div>
+</form>
+
+<form method="post" action="{{ url_for('supprimer_projet', id=projet.id) }}"
+      onsubmit="return confirm('Supprimer ce projet et toutes ses taches ?');">
+  <button type="submit" class="btn btn-danger btn-small">Supprimer ce projet</button>
+</form>
+
+<h2>Taches du projet</h2>
+<a class="btn btn-small" href="{{ url_for('taches', project_id=projet.id) }}">Voir dans la liste des taches</a>
+{% if tasks %}
+<table class="table" style="margin-top:0.8rem;">
+  <thead><tr><th>Titre</th><th>Collaborateur</th><th>Priorite</th><th>Sensibilite</th><th>Echeance</th><th>Statut</th><th></th></tr></thead>
+  <tbody>
+  {% for t in tasks %}
+    <tr class="{{ 'overdue-row' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee'] else '' }}">
+      <td><a href="{{ url_for('detail_tache', id=t.id) }}">{{ t.title }}</a></td>
+      <td>{{ t.collaborator_name or '-' }}</td>
+      <td><span class="badge badge-{{ t.priority|slugify }}">{{ t.priority }}</span></td>
+      <td><span class="badge badge-{{ t.sensitivity|slugify }}">{{ t.sensitivity }}</span></td>
+      <td>{{ t.due_date or '-' }} {{ deadline_badge(t) }}</td>
+      <td><span class="badge badge-{{ t.status|slugify }}">{{ t.status }}</span></td>
+      <td><a class="btn btn-small" href="{{ url_for('detail_tache', id=t.id) }}">Voir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted" style="margin-top:0.8rem;">Aucune tache liee a ce projet.</p>
+{% endif %}
+{% endblock %}

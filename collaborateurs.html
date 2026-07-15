@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>Collaborateurs</h1>
+
+<form method="post" action="{{ url_for('ajouter_collaborateur') }}" class="form-inline">
+  <input type="text" name="name" placeholder="Nom" required>
+  <input type="email" name="email" placeholder="Email" required>
+  <input type="text" name="phone" placeholder="Telephone (optionnel)">
+  <button type="submit" class="btn">Ajouter</button>
+</form>
+
+{% if collaborateurs %}
+<table class="table">
+  <thead><tr><th>Nom</th><th>Email</th><th>Telephone</th><th></th></tr></thead>
+  <tbody>
+  {% for c in collaborateurs %}
+    <tr>
+      <td><a href="{{ url_for('detail_collaborateur', id=c.id) }}">{{ c.name }}</a></td>
+      <td>{{ c.email }}</td>
+      <td>{{ c.phone or '-' }}</td>
+      <td><a class="btn btn-small" href="{{ url_for('detail_collaborateur', id=c.id) }}">Ouvrir</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">Aucun collaborateur pour le moment.</p>
+{% endif %}
+{% endblock %}
