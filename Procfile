@@ -1,1 +1,1 @@
-web: gunicorn 'app:create_app()' --workers 1 --threads 4 --timeout 60
+web: gunicorn 'app:create_app()' --workers 1 --threads 4 --timeout 90

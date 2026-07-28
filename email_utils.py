@@ -10,6 +10,7 @@ import logging
 import smtplib
 import socket
 import ssl
+import time
 from datetime import datetime, timezone
 from email.message import EmailMessage
 
@@ -17,9 +18,20 @@ import database
 
 logger = logging.getLogger(__name__)
 
-# Delai maximal (secondes) pour chaque operation reseau SMTP. Volontairement court
-# pour rester sous le timeout du worker gunicorn et ne pas bloquer l'interface.
-SMTP_TIMEOUT = 15
+# Delai maximal (secondes) pour CHAQUE adresse IP essayee. Des serveurs comme
+# smtp.office365.com renvoient jusqu'a 8 adresses IPv4 : avec un timeout trop
+# long et toutes les adresses testees, une seule tentative pourrait depasser le
+# timeout du worker gunicorn. On garde donc un timeout court par adresse et on
+# limite le nombre d'adresses essayees (voir MAX_ADDRESSES_PER_HOST).
+SMTP_TIMEOUT = 6
+MAX_ADDRESSES_PER_HOST = 2
+# Nombre de tentatives completes (connexion + auth + envoi) en cas d'erreur
+# reseau transitoire (timeout, "network unreachable"...). Un blocage reseau
+# intermittent sur un hebergeur gratuit se resout souvent des le 2e essai.
+# Pire cas : 2 ports x 2 adresses x 6s x 2 tentatives + pause = ~50s, reste
+# sous le timeout du worker gunicorn (voir render.yaml / Procfile).
+MAX_ATTEMPTS = 2
+RETRY_DELAY = 1
 
 
 def _create_ipv4_connection(host, port, timeout, source_address=None):
@@ -31,11 +43,13 @@ def _create_ipv4_connection(host, port, timeout, source_address=None):
     "Network is unreachable", sans jamais essayer les adresses IPv4 -- pourtant
     disponibles et fonctionnelles. On force donc explicitement la resolution
     en IPv4 pour eviter ce probleme independamment du fournisseur SMTP.
+
+    On limite le nombre d'adresses essayees a MAX_ADDRESSES_PER_HOST pour que
+    le temps total reste borne meme si plusieurs adresses sont injoignables.
     """
     last_exc = None
-    for family, socktype, proto, _, sockaddr in socket.getaddrinfo(
-        host, port, socket.AF_INET, socket.SOCK_STREAM
-    ):
+    addresses = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+    for family, socktype, proto, _, sockaddr in addresses[:MAX_ADDRESSES_PER_HOST]:
         sock = None
         try:
             sock = socket.socket(family, socktype, proto)
@@ -84,8 +98,15 @@ def _friendly_error(exc):
         )
     if isinstance(exc, smtplib.SMTPRecipientsRefused):
         return f"Destinataire refuse par le serveur : {exc}."
-    if isinstance(exc, (smtplib.SMTPConnectError, ConnectionError, socket.timeout,
-                        TimeoutError, ssl.SSLError, OSError)):
+    if isinstance(exc, (socket.timeout, TimeoutError)):
+        return (
+            f"Impossible de se connecter au serveur SMTP (delai depasse : {exc}). "
+            "C'est souvent un incident reseau temporaire cote hebergeur (deja reessaye "
+            "automatiquement sans succes). Reessayez dans quelques instants ; si cela "
+            "persiste, ce fournisseur SMTP est probablement peu fiable depuis cet "
+            "hebergement -- passez par un fournisseur d'envoi dedie (Brevo, SendGrid)."
+        )
+    if isinstance(exc, (smtplib.SMTPConnectError, ConnectionError, ssl.SSLError, OSError)):
         return (
             f"Impossible de se connecter au serveur SMTP ({exc}). "
             "Le port est peut-etre bloque par l'hebergeur, ou le serveur/port sont "
@@ -93,6 +114,10 @@ def _friendly_error(exc):
             "serveur, ou utilisez un autre fournisseur d'envoi d'emails."
         )
     return f"Echec de l'envoi : {exc}"
+
+
+_TRANSIENT_NETWORK_ERRORS = (smtplib.SMTPConnectError, ConnectionError, socket.timeout,
+                              TimeoutError, ssl.SSLError, OSError)
 
 
 def _open_connection(host, port, timeout):
@@ -157,26 +182,34 @@ def _send_raw(to_addr, subject, body):
     if int(port) == 587:
         ports_to_try.append(465)
 
-    last_exc = None
-    for attempt_port in ports_to_try:
-        try:
-            with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
-                smtp.login(user, password)
-                smtp.send_message(msg)
-            return True, "Email envoye avec succes."
-        except smtplib.SMTPAuthenticationError as exc:
-            # L'authentification echouera de la meme facon sur un autre port :
-            # inutile de reessayer, on remonte tout de suite le diagnostic.
-            logger.warning("Authentification SMTP refusee : %s", exc)
-            return False, _friendly_error(exc)
-        except (smtplib.SMTPConnectError, ConnectionError, socket.timeout,
-                TimeoutError, ssl.SSLError, OSError) as exc:
-            logger.warning("Connexion SMTP echouee sur le port %s : %s", attempt_port, exc)
-            last_exc = exc
-            continue  # on essaie le port de repli s'il en reste un
-        except Exception as exc:  # toute autre erreur SMTP inattendue
-            logger.exception("Echec inattendu de l'envoi de l'email")
-            return False, _friendly_error(exc)
+    for attempt_num in range(1, MAX_ATTEMPTS + 1):
+        last_exc = None
+        for attempt_port in ports_to_try:
+            try:
+                with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
+                    smtp.login(user, password)
+                    smtp.send_message(msg)
+                return True, "Email envoye avec succes."
+            except smtplib.SMTPAuthenticationError as exc:
+                # L'authentification echouera de la meme facon sur un autre port
+                # ou a une nouvelle tentative : inutile d'insister.
+                logger.warning("Authentification SMTP refusee : %s", exc)
+                return False, _friendly_error(exc)
+            except _TRANSIENT_NETWORK_ERRORS as exc:
+                logger.warning(
+                    "Connexion SMTP echouee sur le port %s (essai %s/%s) : %s",
+                    attempt_port, attempt_num, MAX_ATTEMPTS, exc,
+                )
+                last_exc = exc
+                continue  # on essaie le port de repli s'il en reste un
+            except Exception as exc:  # toute autre erreur SMTP inattendue
+                logger.exception("Echec inattendu de l'envoi de l'email")
+                return False, _friendly_error(exc)
+
+        # Tous les ports ont echoue avec une erreur reseau transitoire : on
+        # retente une fois de plus apres une courte pause avant d'abandonner.
+        if attempt_num < MAX_ATTEMPTS:
+            time.sleep(RETRY_DELAY)
 
     return False, _friendly_error(last_exc)
 
