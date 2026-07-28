@@ -18,18 +18,16 @@ import database
 
 logger = logging.getLogger(__name__)
 
-# Delai maximal (secondes) pour CHAQUE adresse IP essayee. Des serveurs comme
-# smtp.office365.com renvoient jusqu'a 8 adresses IPv4 : avec un timeout trop
-# long et toutes les adresses testees, une seule tentative pourrait depasser le
-# timeout du worker gunicorn. On garde donc un timeout court par adresse et on
-# limite le nombre d'adresses essayees (voir MAX_ADDRESSES_PER_HOST).
-SMTP_TIMEOUT = 6
-MAX_ADDRESSES_PER_HOST = 2
+# Delai maximal (secondes) pour CHAQUE adresse IP essayee. Volontairement tres
+# court : quand un fournisseur (souvent Office 365 depuis une IP partagee
+# d'hebergeur gratuit) bloque/bride silencieusement la connexion, il vaut mieux
+# echouer vite et clairement que de faire attendre l'utilisateur une minute.
+SMTP_TIMEOUT = 5
+MAX_ADDRESSES_PER_HOST = 1
 # Nombre de tentatives completes (connexion + auth + envoi) en cas d'erreur
-# reseau transitoire (timeout, "network unreachable"...). Un blocage reseau
-# intermittent sur un hebergeur gratuit se resout souvent des le 2e essai.
-# Pire cas : 2 ports x 2 adresses x 6s x 2 tentatives + pause = ~50s, reste
-# sous le timeout du worker gunicorn (voir render.yaml / Procfile).
+# reseau transitoire. Pire cas : 2 ports x 1 adresse x 5s x 2 tentatives +
+# pause = ~21s, tres largement sous le timeout du worker gunicorn (voir
+# render.yaml / Procfile).
 MAX_ATTEMPTS = 2
 RETRY_DELAY = 1
 
