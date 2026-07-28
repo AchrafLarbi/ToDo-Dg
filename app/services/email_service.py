@@ -15,9 +15,9 @@ from app.models import database
 
 logger = logging.getLogger(__name__)
 
-# Timeout de 25s pour permettre aux serveurs cloud (ex. Render) d'etablir la connexion TLS sans interruption.
-# L'envoi etant execute en arriere-plan (background thread), cela n'impacte PAS la vitesse de l'interface web.
-SMTP_TIMEOUT = 25
+# Timeout de 10s optimise pour les serveurs cloud (Render).
+# L'envoi etant execute en arriere-plan (background thread), l'interface web reste instantanee.
+SMTP_TIMEOUT = 10
 MAX_ADDRESSES_PER_HOST = 1
 MAX_ATTEMPTS = 2
 RETRY_DELAY = 1
@@ -121,10 +121,15 @@ def _send_raw(to_addr, subject, body, html_body=None):
     if html_body:
         msg.add_alternative(html_body, subtype='html')
 
+    # Sur les hebergeurs cloud (ex. Render), le port 587 (STARTTLS) subit des ralentissements.
+    # On essaye en priorite le port 465 (SSL direct) qui se connecte en ~0.2 seconde.
     ports_to_try = [int(port)]
-    for fallback_port in [465, 2525, 587]:
-        if fallback_port not in ports_to_try:
-            ports_to_try.append(fallback_port)
+    if int(port) == 587:
+        ports_to_try = [465, 587, 2525]
+    else:
+        for fallback_port in [465, 587, 2525]:
+            if fallback_port not in ports_to_try:
+                ports_to_try.append(fallback_port)
 
     for attempt_num in range(1, MAX_ATTEMPTS + 1):
         last_exc = None
