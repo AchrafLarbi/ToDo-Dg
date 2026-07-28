@@ -22,6 +22,49 @@ logger = logging.getLogger(__name__)
 SMTP_TIMEOUT = 15
 
 
+def _create_ipv4_connection(host, port, timeout, source_address=None):
+    """Ouvre une connexion TCP en forcant IPv4.
+
+    Certains hebergeurs (dont Render) n'ont pas de route sortante IPv6. Or des
+    serveurs comme smtp.office365.com repondent parfois avec une adresse IPv6
+    en tete de liste DNS : la connexion echoue alors immediatement avec
+    "Network is unreachable", sans jamais essayer les adresses IPv4 -- pourtant
+    disponibles et fonctionnelles. On force donc explicitement la resolution
+    en IPv4 pour eviter ce probleme independamment du fournisseur SMTP.
+    """
+    last_exc = None
+    for family, socktype, proto, _, sockaddr in socket.getaddrinfo(
+        host, port, socket.AF_INET, socket.SOCK_STREAM
+    ):
+        sock = None
+        try:
+            sock = socket.socket(family, socktype, proto)
+            if timeout is not None:
+                sock.settimeout(timeout)
+            if source_address:
+                sock.bind(source_address)
+            sock.connect(sockaddr)
+            return sock
+        except OSError as exc:
+            last_exc = exc
+            if sock is not None:
+                sock.close()
+    if last_exc is not None:
+        raise last_exc
+    raise OSError(f"Aucune adresse IPv4 trouvee pour {host} (serveur accessible uniquement en IPv6 ?).")
+
+
+class _IPv4SMTP(smtplib.SMTP):
+    def _get_socket(self, host, port, timeout):
+        return _create_ipv4_connection(host, port, timeout, self.source_address)
+
+
+class _IPv4SMTP_SSL(smtplib.SMTP_SSL):
+    def _get_socket(self, host, port, timeout):
+        raw_socket = _create_ipv4_connection(host, port, timeout, self.source_address)
+        return self.context.wrap_socket(raw_socket, server_hostname=self._host)
+
+
 def _friendly_error(exc):
     """Transforme une exception SMTP / reseau en message clair et actionnable."""
     if isinstance(exc, smtplib.SMTPAuthenticationError):
@@ -59,8 +102,8 @@ def _open_connection(host, port, timeout):
     """
     context = ssl.create_default_context()
     if int(port) == 465:
-        return smtplib.SMTP_SSL(host, port, timeout=timeout, context=context)
-    smtp = smtplib.SMTP(host, port, timeout=timeout)
+        return _IPv4SMTP_SSL(host, port, timeout=timeout, context=context)
+    smtp = _IPv4SMTP(host, port, timeout=timeout)
     smtp.ehlo()
     smtp.starttls(context=context)
     smtp.ehlo()
