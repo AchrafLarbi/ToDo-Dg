@@ -47,25 +47,16 @@ def run_verification_echeances():
     sent_ko = 0
     details = []
 
-    # Envoi par destinataire sous forme de tableau recapitutatif pour les taches en retard
+    # Envoi par destinataire sous forme de tableau recapitutatif pour TOUTES les taches en retard
     for collab_id, collab_tasks in overdue_by_collab.items():
         collab_email = collab_tasks[0]['collaborator_email']
         collab_name = collab_tasks[0]['collaborator_name']
-        if len(collab_tasks) > 1:
-            success, msg = send_overdue_digest_to_collaborator(collab_email, collab_name, collab_tasks)
-            if success:
-                sent_ok += len(collab_tasks)
-            else:
-                sent_ko += len(collab_tasks)
-            details.append((f"Tableau des {len(collab_tasks)} tâches en retard", collab_name, success, msg))
+        success, msg = send_overdue_digest_to_collaborator(collab_email, collab_name, collab_tasks)
+        if success:
+            sent_ok += len(collab_tasks)
         else:
-            t = collab_tasks[0]
-            success, msg = send_reminder(t['id'], 'retard')
-            if success:
-                sent_ok += 1
-            else:
-                sent_ko += 1
-            details.append((t['title'], collab_name, success, msg))
+            sent_ko += len(collab_tasks)
+        details.append((f"Tableau de {len(collab_tasks)} tâche(s) en retard", collab_name, success, msg))
 
     # Envoi des relances d'echeance proche
     for task in other_tasks:
