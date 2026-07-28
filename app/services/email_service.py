@@ -15,10 +15,12 @@ from app.models import database
 
 logger = logging.getLogger(__name__)
 
-# Timeout court (6s) pour eviter de bloquer si un port/serveur est indisponible
-SMTP_TIMEOUT = 6
+# Timeout de 25s pour permettre aux serveurs cloud (ex. Render) d'etablir la connexion TLS sans interruption.
+# L'envoi etant execute en arriere-plan (background thread), cela n'impacte PAS la vitesse de l'interface web.
+SMTP_TIMEOUT = 25
 MAX_ADDRESSES_PER_HOST = 1
-MAX_ATTEMPTS = 1
+MAX_ATTEMPTS = 2
+RETRY_DELAY = 1
 
 
 def _create_ipv4_connection(host, port, timeout, source_address=None):
@@ -119,28 +121,32 @@ def _send_raw(to_addr, subject, body, html_body=None):
     if html_body:
         msg.add_alternative(html_body, subtype='html')
 
-    # Port principal configure, plus un seul repli si 587 -> 465
     ports_to_try = [int(port)]
-    if int(port) == 587:
-        ports_to_try.append(465)
+    for fallback_port in [465, 2525, 587]:
+        if fallback_port not in ports_to_try:
+            ports_to_try.append(fallback_port)
 
-    last_exc = None
-    for attempt_port in ports_to_try:
-        try:
-            with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
-                smtp.login(user, password)
-                smtp.send_message(msg)
-            return True, "Email envoyé avec succès."
-        except smtplib.SMTPAuthenticationError as exc:
-            logger.warning("Authentification SMTP refusée : %s", exc)
-            return False, _friendly_error(exc)
-        except _TRANSIENT_NETWORK_ERRORS as exc:
-            logger.warning("Connexion SMTP échouée sur le port %s : %s", attempt_port, exc)
-            last_exc = exc
-            continue
-        except Exception as exc:
-            logger.exception("Échec inattendu de l'envoi de l'email")
-            return False, _friendly_error(exc)
+    for attempt_num in range(1, MAX_ATTEMPTS + 1):
+        last_exc = None
+        for attempt_port in ports_to_try:
+            try:
+                with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
+                    smtp.login(user, password)
+                    smtp.send_message(msg)
+                return True, "Email envoyé avec succès."
+            except smtplib.SMTPAuthenticationError as exc:
+                logger.warning("Authentification SMTP refusée : %s", exc)
+                return False, _friendly_error(exc)
+            except _TRANSIENT_NETWORK_ERRORS as exc:
+                logger.warning("Connexion SMTP échouée sur le port %s : %s", attempt_port, exc)
+                last_exc = exc
+                continue
+            except Exception as exc:
+                logger.exception("Échec inattendu de l'envoi de l'email")
+                return False, _friendly_error(exc)
+
+        if attempt_num < MAX_ATTEMPTS:
+            time.sleep(RETRY_DELAY)
 
     return False, _friendly_error(last_exc)
 
