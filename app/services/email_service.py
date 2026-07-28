@@ -14,7 +14,7 @@ from app.models import database
 
 logger = logging.getLogger(__name__)
 
-SMTP_TIMEOUT = 5
+SMTP_TIMEOUT = 15
 MAX_ADDRESSES_PER_HOST = 1
 MAX_ATTEMPTS = 2
 RETRY_DELAY = 1
@@ -119,8 +119,9 @@ def _send_raw(to_addr, subject, body, html_body=None):
         msg.add_alternative(html_body, subtype='html')
 
     ports_to_try = [int(port)]
-    if int(port) == 587:
-        ports_to_try.append(465)
+    for fallback_port in [465, 2525, 587]:
+        if fallback_port not in ports_to_try:
+            ports_to_try.append(fallback_port)
 
     for attempt_num in range(1, MAX_ATTEMPTS + 1):
         last_exc = None
