@@ -24,25 +24,20 @@ RETRY_DELAY = 1
 
 
 def _create_ipv4_connection(host, port, timeout, source_address=None):
-    last_exc = None
-    addresses = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
-    for family, socktype, proto, _, sockaddr in addresses[:MAX_ADDRESSES_PER_HOST]:
-        sock = None
-        try:
-            sock = socket.socket(family, socktype, proto)
-            if timeout is not None:
-                sock.settimeout(timeout)
-            if source_address:
-                sock.bind(source_address)
-            sock.connect(sockaddr)
-            return sock
-        except OSError as exc:
-            last_exc = exc
-            if sock is not None:
-                sock.close()
-    if last_exc is not None:
-        raise last_exc
-    raise OSError(f"Aucune adresse IPv4 trouvée pour {host}.")
+    # Sur Linux/Render, socket.getaddrinfo fait une requete AAAA IPv6 qui expire au bout de 10s.
+    # socket.gethostbyname resout directement l'adresse IPv4 en moins de 0.07 seconde.
+    try:
+        ip = socket.gethostbyname(host)
+    except Exception:
+        ip = host
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    if timeout is not None:
+        sock.settimeout(timeout)
+    if source_address:
+        sock.bind(source_address)
+    sock.connect((ip, port))
+    return sock
 
 
 class _IPv4SMTP(smtplib.SMTP):
