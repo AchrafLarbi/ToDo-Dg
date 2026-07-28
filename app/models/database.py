@@ -84,7 +84,6 @@ CREATE TABLE IF NOT EXISTS settings (
 
 def _database_url():
     url = os.environ['DATABASE_URL']
-    # Render / Heroku fournissent parfois "postgres://", psycopg2 attend "postgresql://"
     if url.startswith('postgres://'):
         url = url.replace('postgres://', 'postgresql://', 1)
     return url
@@ -99,8 +98,6 @@ def init_db():
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(SCHEMA)
-        # Migration pour les bases creees avant l'ajout de l'adresse expediteur
-        # distincte du login SMTP (necessaire pour Brevo, SendGrid, etc.).
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_email TEXT")
         cur.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
     conn.commit()
@@ -372,7 +369,6 @@ def update_statut(task_id, status, closure_comment, closed_at):
 
 
 def collaborator_update_tache(task_id, new_status, new_due_date, comment):
-    """Mise a jour d'une tache par le collaborateur via son lien securise."""
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute("SELECT status, due_date FROM tasks WHERE id = %s", (task_id,))
@@ -416,7 +412,7 @@ def register_reminder_sent(task_id, sent_at):
     conn.close()
 
 
-# ---- Historique des emails et des mises a jour --------------------------------
+# ---- Historique -------------------------------------------------------------
 
 def log_reminder(task_id, reminder_type, success, message):
     conn = get_db()
@@ -447,7 +443,7 @@ def list_task_updates(task_id):
     return rows
 
 
-# ---- Tableau de bord -----------------------------------------------------------
+# ---- Dashboard -------------------------------------------------------------
 
 def dashboard_stats(today, due_soon_limit):
     conn = get_db()
@@ -527,7 +523,6 @@ def due_soon_tasks(today, limit_date):
 
 
 def tasks_needing_reminder(today, limit_date):
-    """Taches en retard ou dont l'echeance approche, assignees a un collaborateur avec email."""
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(

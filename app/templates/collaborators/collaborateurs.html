@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="mb-8">
+  <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Collaborateurs</h1>
+  <p class="text-slate-500 text-sm mt-1">Gérez l'équipe et suivez leurs tâches assignées</p>
+</div>
+
+<!-- Inline Form Card -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
+  <h2 class="text-base font-bold text-slate-900 mb-4">Ajouter un collaborateur</h2>
+  
+  <form method="post" action="{{ url_for('collaborators.ajouter_collaborateur') }}" class="flex flex-wrap items-center gap-3">
+    <input type="text" name="name" placeholder="Nom complet" required class="flex-1 min-w-[200px] px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    <input type="email" name="email" placeholder="Adresse email" required class="flex-1 min-w-[220px] px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    <input type="text" name="phone" placeholder="Téléphone (optionnel)" class="flex-1 min-w-[180px] px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    
+    <button type="submit" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+      Ajouter
+    </button>
+  </form>
+</div>
+
+<!-- Collaborators Table -->
+{% if collaborateurs %}
+<div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-sm text-slate-600">
+      <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+        <tr>
+          <th class="px-6 py-4">Nom</th>
+          <th class="px-6 py-4">Email</th>
+          <th class="px-6 py-4">Téléphone</th>
+          <th class="px-6 py-4">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+      {% for c in collaborateurs %}
+        <tr class="hover:bg-slate-50/80 transition-colors">
+          <td class="px-6 py-4 font-semibold text-slate-900">
+            <a href="{{ url_for('collaborators.detail_collaborateur', id=c.id) }}" class="hover:text-indigo-600 transition-colors">{{ c.name }}</a>
+          </td>
+          <td class="px-6 py-4">{{ c.email }}</td>
+          <td class="px-6 py-4">{{ c.phone or '-' }}</td>
+          <td class="px-6 py-4">
+            <a href="{{ url_for('collaborators.detail_collaborateur', id=c.id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors">
+              Ouvrir
+            </a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="bg-white p-8 rounded-2xl border border-slate-200/80 text-center text-slate-500 text-sm">
+  Aucun collaborateur pour le moment.
+</div>
+{% endif %}
+
+{% endblock %}

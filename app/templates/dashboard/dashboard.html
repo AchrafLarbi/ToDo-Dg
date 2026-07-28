@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Tableau de bord</h1>
+    <p class="text-slate-500 text-sm mt-1">Vue d'ensemble de l'activité, de la répartition et des urgences</p>
+  </div>
+  <form method="post" action="{{ url_for('dashboard.verifier_echeances') }}">
+    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      Vérifier les échéances et relancer
+    </button>
+  </form>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Tâches actives</span>
+      <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+      </div>
+    </div>
+    <div class="text-3xl font-extrabold text-slate-900">{{ stats.actives }}</div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">En retard</span>
+      <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <div class="text-3xl font-extrabold text-rose-600">{{ stats.overdue }}</div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Échéance proche</span>
+      <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+    </div>
+    <div class="text-3xl font-extrabold text-amber-600">{{ stats.due_soon }}</div>
+  </div>
+
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+    <div class="flex items-center justify-between mb-4">
+      <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Terminées / Clôturées</span>
+      <div class="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <div class="text-3xl font-extrabold text-emerald-600">{{ stats.closed }}</div>
+  </div>
+</div>
+
+<!-- Section: Répartition -->
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Répartition par collaborateur</h2>
+  </div>
+
+  {% if par_collaborateur %}
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-6 py-4">Collaborateur</th>
+            <th class="px-6 py-4">Actives</th>
+            <th class="px-6 py-4">En retard</th>
+            <th class="px-6 py-4">Échéance proche</th>
+            <th class="px-6 py-4">Terminées / Clôturées</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for c in par_collaborateur %}
+          <tr class="hover:bg-slate-50/80 transition-colors">
+            <td class="px-6 py-4 font-semibold text-slate-900">
+              <a href="{{ url_for('collaborators.detail_collaborateur', id=c.id) }}" class="hover:text-indigo-600 transition-colors">{{ c.name }}</a>
+            </td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/60">{{ c.actives }}</span></td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/60">{{ c.overdue }}</span></td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200/60">{{ c.due_soon }}</span></td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/60">{{ c.closed }}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 text-slate-500 text-sm">
+    Aucun collaborateur pour le moment.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Section: Tâches en retard -->
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Tâches en retard</h2>
+  </div>
+
+  {% if overdue %}
+  <div class="bg-rose-50/30 rounded-2xl border border-rose-200/80 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="bg-rose-100/50 border-b border-rose-200/60 text-xs font-semibold text-rose-800 uppercase tracking-wider">
+          <tr>
+            <th class="px-6 py-4">Titre</th>
+            <th class="px-6 py-4">Projet</th>
+            <th class="px-6 py-4">Collaborateur</th>
+            <th class="px-6 py-4">Priorité</th>
+            <th class="px-6 py-4">Sensibilité</th>
+            <th class="px-6 py-4">Échéance</th>
+            <th class="px-6 py-4">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-rose-100">
+        {% for t in overdue %}
+          <tr class="hover:bg-rose-100/40 transition-colors">
+            <td class="px-6 py-4 font-semibold text-slate-900">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-rose-600 transition-colors">{{ t.title }}</a>
+            </td>
+            <td class="px-6 py-4">{{ t.project_name or '-' }}</td>
+            <td class="px-6 py-4">{{ t.collaborator_name or '-' }}</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 border border-rose-200">{{ t.priority }}</span></td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ t.sensitivity }}</span></td>
+            <td class="px-6 py-4 font-bold text-rose-600">{{ t.due_date }}</td>
+            <td class="px-6 py-4">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded-lg transition-colors">
+                Voir
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 text-slate-500 text-sm">
+    Aucune tâche en retard.
+  </div>
+  {% endif %}
+</div>
+
+<!-- Section: Échéances proches -->
+<div class="mb-10">
+  <div class="flex items-center gap-2 mb-4">
+    <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+    <h2 class="text-xl font-bold text-slate-900 tracking-tight">Échéances proches</h2>
+  </div>
+
+  {% if due_soon %}
+  <div class="bg-amber-50/30 rounded-2xl border border-amber-200/80 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm text-slate-600">
+        <thead class="bg-amber-100/50 border-b border-amber-200/60 text-xs font-semibold text-amber-800 uppercase tracking-wider">
+          <tr>
+            <th class="px-6 py-4">Titre</th>
+            <th class="px-6 py-4">Projet</th>
+            <th class="px-6 py-4">Collaborateur</th>
+            <th class="px-6 py-4">Priorité</th>
+            <th class="px-6 py-4">Sensibilité</th>
+            <th class="px-6 py-4">Échéance</th>
+            <th class="px-6 py-4">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-amber-100">
+        {% for t in due_soon %}
+          <tr class="hover:bg-amber-100/40 transition-colors">
+            <td class="px-6 py-4 font-semibold text-slate-900">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-amber-700 transition-colors">{{ t.title }}</a>
+            </td>
+            <td class="px-6 py-4">{{ t.project_name or '-' }}</td>
+            <td class="px-6 py-4">{{ t.collaborator_name or '-' }}</td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">{{ t.priority }}</span></td>
+            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ t.sensitivity }}</span></td>
+            <td class="px-6 py-4 font-bold text-amber-700">{{ t.due_date }}</td>
+            <td class="px-6 py-4">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs rounded-lg transition-colors">
+                Voir
+              </a>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 text-slate-500 text-sm">
+    Aucune échéance proche.
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

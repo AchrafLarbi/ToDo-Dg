@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gestion des Tâches</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  if (window.tailwind) {
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+        }
+      }
+    }
+  }
+</script>
+</head>
+<body class="bg-slate-50 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+<nav class="sticky top-0 z-50 bg-slate-900 border-b border-slate-800 text-white shadow-lg">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    <a href="{{ url_for('dashboard.dashboard') }}" class="flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity">
+      <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/30">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+        </svg>
+      </div>
+      <span>Gestion des Tâches</span>
+    </a>
+    
+    <div class="flex items-center gap-1.5 overflow-x-auto py-1">
+      <a href="{{ url_for('dashboard.dashboard') }}" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all {{ 'bg-indigo-600 text-white font-semibold shadow-sm' if request.endpoint == 'dashboard.dashboard' else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        Dashboard
+      </a>
+      <a href="{{ url_for('projects.projets') }}" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all {{ 'bg-indigo-600 text-white font-semibold shadow-sm' if request.endpoint in ['projects.projets', 'projects.detail_projet'] else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+        Projets
+      </a>
+      <a href="{{ url_for('tasks.taches') }}" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all {{ 'bg-indigo-600 text-white font-semibold shadow-sm' if request.endpoint in ['tasks.taches', 'tasks.detail_tache'] else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+        Tâches
+      </a>
+      <a href="{{ url_for('collaborators.collaborateurs') }}" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all {{ 'bg-indigo-600 text-white font-semibold shadow-sm' if request.endpoint in ['collaborators.collaborateurs', 'collaborators.detail_collaborateur'] else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+        Collaborateurs
+      </a>
+      <a href="{{ url_for('settings.parametres') }}" class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-all {{ 'bg-indigo-600 text-white font-semibold shadow-sm' if request.endpoint == 'settings.parametres' else 'text-slate-400 hover:text-white hover:bg-slate-800' }}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+        Paramètres
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main class="max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="space-y-3 mb-6">
+        {% for category, message in messages %}
+          {% if category == 'success' %}
+            <div class="p-4 rounded-xl bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-sm font-medium shadow-sm flex items-center gap-3">
+              <svg class="w-5 h-5 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>{{ message }}</span>
+            </div>
+          {% elif category == 'danger' %}
+            <div class="p-4 rounded-xl bg-rose-50 border-l-4 border-rose-500 text-rose-800 text-sm font-medium shadow-sm flex items-center gap-3">
+              <svg class="w-5 h-5 text-rose-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              <span>{{ message }}</span>
+            </div>
+          {% else %}
+            <div class="p-4 rounded-xl bg-amber-50 border-l-4 border-amber-500 text-amber-800 text-sm font-medium shadow-sm flex items-center gap-3">
+              <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+              <span>{{ message }}</span>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="border-t border-slate-200 py-6 text-center text-xs text-slate-500">
+  <div class="max-w-6xl mx-auto px-4">
+    Gestion des Tâches &copy; 2026 &bull; Plateforme d'organisation d'équipe
+  </div>
+</footer>
+</body>
+</html>

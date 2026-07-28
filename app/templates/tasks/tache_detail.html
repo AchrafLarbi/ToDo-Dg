@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ task.title }}</h1>
+    <div class="flex flex-wrap gap-2 mt-2">
+      <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Priorité : {{ task.priority }}</span>
+      <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Sensibilité : {{ task.sensitivity }}</span>
+      <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Statut : {{ task.status }}</span>
+      {{ deadline_badge(task) }}
+    </div>
+  </div>
+  <a href="{{ url_for('tasks.taches') }}" class="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition-colors">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+    Retour à la liste
+  </a>
+</div>
+
+<!-- Edit Form Card -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
+  <h2 class="text-base font-bold text-slate-900 mb-4">Modifier les informations</h2>
+  
+  <form method="post" action="{{ url_for('tasks.modifier_tache', id=task.id) }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="md:col-span-2 lg:col-span-3">
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Titre</label>
+      <input type="text" name="title" value="{{ task.title }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Projet</label>
+      <select name="project_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+        <option value="">-- Aucun --</option>
+        {% for p in projets %}
+          <option value="{{ p.id }}" {{ 'selected' if task.project_id == p.id }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Collaborateur assigné</label>
+      <select name="collaborator_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+        <option value="">-- Non assigné --</option>
+        {% for c in collaborateurs %}
+          <option value="{{ c.id }}" {{ 'selected' if task.collaborator_id == c.id }}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Priorité</label>
+      <select name="priority" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+        {% for p in PRIORITIES %}
+          <option value="{{ p }}" {{ 'selected' if task.priority == p }}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Sensibilité</label>
+      <select name="sensitivity" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+        {% for s in SENSITIVITIES %}
+          <option value="{{ s }}" {{ 'selected' if task.sensitivity == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Échéance</label>
+      <input type="date" name="due_date" value="{{ task.due_date or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    </div>
+
+    <div class="md:col-span-2 lg:col-span-3">
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Description</label>
+      <textarea name="description" rows="3" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">{{ task.description or '' }}</textarea>
+    </div>
+
+    <div class="md:col-span-2 lg:col-span-3">
+      <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
+        Enregistrer les modifications
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Change Status Card -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
+  <h2 class="text-base font-bold text-slate-900 mb-3">Changer le statut</h2>
+  <form method="post" action="{{ url_for('tasks.changer_statut', id=task.id) }}" class="space-y-4">
+    <div class="flex flex-wrap gap-2">
+      {% for s in STATUSES %}
+        <button type="submit" name="status" value="{{ s }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold transition-all {{ 'bg-indigo-600 text-white shadow-md' if s == task.status else 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">
+          {{ s }}
+        </button>
+      {% endfor %}
+    </div>
+
+    <div>
+      <label class="block text-xs font-medium text-slate-500 mb-1">Commentaire de clôture (si vous passez la tâche en Terminée / Clôturée)</label>
+      <textarea name="closure_comment" rows="2" placeholder="Facultatif..." class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">{{ task.closure_comment or '' }}</textarea>
+    </div>
+  </form>
+</div>
+
+<!-- Manual Reminder Card -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
+  <h2 class="text-base font-bold text-slate-900 mb-2">Relance manuelle par email</h2>
+  {% if task.collaborator_email %}
+    <p class="text-xs text-slate-500 mb-4">Destinataire : <strong>{{ task.collaborator_name }}</strong> ({{ task.collaborator_email }}) &bull; {{ task.reminder_count }} relance(s) envoyée(s) au total.</p>
+    <form method="post" action="{{ url_for('tasks.relancer_tache', id=task.id) }}">
+      <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-colors">
+        Envoyer une relance maintenant
+      </button>
+    </form>
+  {% else %}
+    <p class="text-xs text-slate-500">Aucun collaborateur avec email n'est assigné à cette tâche.</p>
+  {% endif %}
+</div>
+
+<!-- Email History -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
+  <h2 class="text-base font-bold text-slate-900 mb-3">Historique des emails</h2>
+  {% if reminders %}
+    <div class="space-y-2">
+      {% for r in reminders %}
+        <div class="p-3 bg-slate-50 border border-slate-100 rounded-xl text-xs flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded font-bold {{ 'bg-emerald-100 text-emerald-800' if r.success else 'bg-rose-100 text-rose-800' }}">
+              {{ 'OK' if r.success else 'ÉCHEC' }}
+            </span>
+            <span class="font-medium text-slate-700">{{ r.type }}</span>
+            <span class="text-slate-400">&bull; {{ r.message }}</span>
+          </div>
+          <span class="text-slate-400 text-[11px]">{{ r.sent_at }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="text-xs text-slate-500">Aucun email envoyé pour cette tâche.</p>
+  {% endif %}
+</div>
+
+<!-- Delete Action -->
+<div class="pt-2">
+  <form method="post" action="{{ url_for('tasks.supprimer_tache', id=task.id) }}" onsubmit="return confirm('Supprimer définitivement cette tâche ?');">
+    <button type="submit" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs rounded-xl transition-colors">
+      Supprimer cette tâche
+    </button>
+  </form>
+</div>
+
+{% endblock %}

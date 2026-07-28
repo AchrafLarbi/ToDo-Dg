@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi de tâche - Gestion des Tâches</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="bg-slate-50 text-slate-900 font-['Plus_Jakarta_Sans',sans-serif] min-h-screen">
+
+<nav class="bg-slate-900 border-b border-slate-800 text-white shadow-md">
+  <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold">
+      ✓
+    </div>
+    <span class="font-extrabold text-lg tracking-tight">Gestion des Tâches</span>
+  </div>
+</nav>
+
+<main class="max-w-4xl mx-auto px-4 py-8">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="space-y-3 mb-6">
+        {% for category, message in messages %}
+          <div class="p-4 rounded-xl bg-emerald-50 border-l-4 border-emerald-500 text-emerald-800 text-sm font-medium shadow-sm">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  {% if not task %}
+    <div class="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm text-center">
+      <h1 class="text-2xl font-bold text-rose-600 mb-2">Lien invalide</h1>
+      <p class="text-slate-500 text-sm">Ce lien de suivi de tâche n'est plus valide ou a expiré.</p>
+    </div>
+  {% else %}
+    <div class="mb-6">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ task.title }}</h1>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Priorité : {{ task.priority }}</span>
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Sensibilité : {{ task.sensitivity }}</span>
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Statut : {{ task.status }}</span>
+        {{ deadline_badge(task) }}
+      </div>
+    </div>
+
+    <!-- Details Card -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6 space-y-3">
+      <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Projet :</strong> {{ task.project_name or '-' }}</p>
+      <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Échéance actuelle :</strong> {{ task.due_date or 'non définie' }}</p>
+      {% if task.description %}
+        <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Description :</strong> {{ task.description }}</p>
+      {% endif %}
+    </div>
+
+    <!-- Update Form Card -->
+    <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm">
+      <h2 class="text-lg font-bold text-slate-900 mb-4">Mettre à jour cette tâche</h2>
+      
+      <form method="post" action="{{ url_for('tasks.tache_publique_soumettre', token=token) }}" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nouveau statut</label>
+            <select name="status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+              {% for s in STATUSES %}
+                <option value="{{ s }}" {{ 'selected' if task.status == s }}>{{ s }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Proposer une nouvelle échéance (optionnel)</label>
+            <input type="date" name="due_date" value="{{ task.due_date or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Expliquer la situation (retard, blocage, avancement...)</label>
+          <textarea name="comment" rows="3" placeholder="Votre commentaire pour l'administrateur..." class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"></textarea>
+        </div>
+
+        <button type="submit" class="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
+          Envoyer la mise à jour
+        </button>
+      </form>
+    </div>
+  {% endif %}
+</main>
+
+</body>
+</html>
