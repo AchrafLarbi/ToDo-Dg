@@ -4,7 +4,11 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from markupsafe import Markup
 
 from app.models import database, PRIORITIES, SENSITIVITIES, STATUSES
-from app.services import send_task_notification, send_reminder, notify_admin_of_collaborator_update
+from app.services import (
+    send_task_notification_async,
+    send_reminder,
+    notify_admin_async,
+)
 
 tasks_bp = Blueprint('tasks', __name__)
 
@@ -70,7 +74,7 @@ def ajouter_tache():
         sensitivity=request.form.get('sensitivity', 'Normale'),
         due_date=request.form.get('due_date', '').strip(),
     )
-    send_task_notification(task_id)
+    send_task_notification_async(task_id)
     flash('Tâche créée.', 'success')
     return redirect(url_for('tasks.taches'))
 
@@ -156,6 +160,6 @@ def tache_publique_soumettre(token):
     new_due_date = request.form.get('due_date', '').strip()
     comment = request.form.get('comment', '').strip()
     database.collaborator_update_tache(task['id'], new_status, new_due_date, comment)
-    notify_admin_of_collaborator_update(task['id'], new_status, new_due_date, comment)
+    notify_admin_async(task['id'], new_status, new_due_date, comment)
     flash('Votre mise à jour a été enregistrée. Merci !', 'success')
     return redirect(url_for('tasks.tache_publique', token=token))

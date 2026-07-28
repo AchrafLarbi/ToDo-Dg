@@ -1,11 +1,12 @@
 """Service d'envoi d'emails (Outlook / Office 365, Brevo, SendGrid, etc.)
 
-Contient les modeles d'emails professionnels adaptes aux directives de gestion.
+Optimise pour un envoi ultra-rapide et asynchrone (non-bloquant).
 """
 import logging
 import smtplib
 import socket
 import ssl
+import threading
 import time
 from datetime import datetime, timezone
 from email.message import EmailMessage
@@ -14,10 +15,10 @@ from app.models import database
 
 logger = logging.getLogger(__name__)
 
-SMTP_TIMEOUT = 15
+# Timeout court (6s) pour eviter de bloquer si un port/serveur est indisponible
+SMTP_TIMEOUT = 6
 MAX_ADDRESSES_PER_HOST = 1
-MAX_ATTEMPTS = 2
-RETRY_DELAY = 1
+MAX_ATTEMPTS = 1
 
 
 def _create_ipv4_connection(host, port, timeout, source_address=None):
@@ -118,32 +119,28 @@ def _send_raw(to_addr, subject, body, html_body=None):
     if html_body:
         msg.add_alternative(html_body, subtype='html')
 
+    # Port principal configure, plus un seul repli si 587 -> 465
     ports_to_try = [int(port)]
-    for fallback_port in [465, 2525, 587]:
-        if fallback_port not in ports_to_try:
-            ports_to_try.append(fallback_port)
+    if int(port) == 587:
+        ports_to_try.append(465)
 
-    for attempt_num in range(1, MAX_ATTEMPTS + 1):
-        last_exc = None
-        for attempt_port in ports_to_try:
-            try:
-                with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
-                    smtp.login(user, password)
-                    smtp.send_message(msg)
-                return True, "Email envoyé avec succès."
-            except smtplib.SMTPAuthenticationError as exc:
-                logger.warning("Authentification SMTP refusée : %s", exc)
-                return False, _friendly_error(exc)
-            except _TRANSIENT_NETWORK_ERRORS as exc:
-                logger.warning("Connexion SMTP échouée sur le port %s : %s", attempt_port, exc)
-                last_exc = exc
-                continue
-            except Exception as exc:
-                logger.exception("Échec inattendu de l'envoi de l'email")
-                return False, _friendly_error(exc)
-
-        if attempt_num < MAX_ATTEMPTS:
-            time.sleep(RETRY_DELAY)
+    last_exc = None
+    for attempt_port in ports_to_try:
+        try:
+            with _open_connection(host, attempt_port, SMTP_TIMEOUT) as smtp:
+                smtp.login(user, password)
+                smtp.send_message(msg)
+            return True, "Email envoyé avec succès."
+        except smtplib.SMTPAuthenticationError as exc:
+            logger.warning("Authentification SMTP refusée : %s", exc)
+            return False, _friendly_error(exc)
+        except _TRANSIENT_NETWORK_ERRORS as exc:
+            logger.warning("Connexion SMTP échouée sur le port %s : %s", attempt_port, exc)
+            last_exc = exc
+            continue
+        except Exception as exc:
+            logger.exception("Échec inattendu de l'envoi de l'email")
+            return False, _friendly_error(exc)
 
     return False, _friendly_error(last_exc)
 
@@ -171,7 +168,7 @@ def send_test_email():
         "Si vous recevez ce message, la configuration SMTP fonctionne correctement."
     )
     html_body = """
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded: 12px; background-color: #ffffff;">
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
       <h2 style="color: #4f46e5; margin-top: 0;">Test d'envoi d'email</h2>
       <p style="color: #334155; font-size: 14px; line-height: 1.5;">
         Ceci est un email de test envoyé depuis l'application <strong>Gestion des tâches</strong>.
@@ -185,13 +182,6 @@ def send_test_email():
 
 
 def send_task_notification(task_id):
-    """Notification de nouvelle tâche assignée.
-    
-    Phrasé exactement selon la directive :
-    "Bonjour {collaborateur},
-     Une tâche vous a été affectée.
-     [Détails et Échéance dans un tableau clair]"
-    """
     try:
         task = database.get_tache(task_id)
         if not task or not task['collaborator_email']:
@@ -262,8 +252,13 @@ def send_task_notification(task_id):
         logger.exception("Échec de la notification de création de tâche %s", task_id)
 
 
+def send_task_notification_async(task_id):
+    """Envoie la notification en arriere-plan pour ne pas faire attendre le navigateur."""
+    thread = threading.Thread(target=send_task_notification, args=(task_id,), daemon=True)
+    thread.start()
+
+
 def send_reminder(task_id, reminder_type='manuelle'):
-    """Rappel individuel de tâche avec tableau récapitulatif."""
     task = database.get_tache(task_id)
     if not task or not task['collaborator_email']:
         return False, "Aucun collaborateur avec email n'est assigné à cette tâche."
@@ -326,7 +321,6 @@ def send_reminder(task_id, reminder_type='manuelle'):
 
 
 def send_overdue_digest_to_collaborator(collaborator_email, collaborator_name, overdue_tasks):
-    """Envoie un email recapitulatif avec le TABLEAU de toutes les taches en retard d'un collaborateur."""
     if not overdue_tasks or not collaborator_email:
         return False, "Aucune tâche ou adresse email manquante."
 
@@ -424,3 +418,8 @@ def notify_admin_of_collaborator_update(task_id, new_status, new_due_date, comme
         _send_raw(destinataire, subject, body, html_body)
     except Exception:
         logger.exception("Échec de la notification admin pour la tâche %s", task_id)
+
+
+def notify_admin_async(task_id, new_status, new_due_date, comment):
+    thread = threading.Thread(target=notify_admin_of_collaborator_update, args=(task_id, new_status, new_due_date, comment), daemon=True)
+    thread.start()
