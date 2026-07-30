@@ -235,6 +235,7 @@ def send_task_notification(task_id):
         
         subject = f"Une tâche vous a été affectée : {task['title']}"
         
+        rec_type = task.get('recurrence_type', 'Aucune')
         body = (
             f"Bonjour {collab_name},\n\n"
             f"Une tâche vous a été affectée.\n\n"
@@ -242,7 +243,8 @@ def send_task_notification(task_id):
             f"• Projet : {task['project_name'] or '-'}\n"
             f"• Échéance : {task['due_date'] or 'Non définie'}\n"
             f"• Priorité : {task['priority']}\n"
-            f"• Sensibilité : {task['sensitivity']}\n\n"
+            f"• Sensibilité : {task['sensitivity']}\n"
+            f"• Récurrence : {rec_type}\n\n"
             f"Description :\n{task['description'] or 'Aucune'}\n\n"
         )
         if link:
@@ -282,6 +284,10 @@ def send_task_notification(task_id):
               <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 10px; font-weight: bold; color: #334155;">Sensibilité</td>
                 <td style="padding: 10px; color: #334155;">{task['sensitivity']}</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 10px; font-weight: bold; color: #334155;">Type de récurrence</td>
+                <td style="padding: 10px; color: #334155;">{rec_type}</td>
               </tr>
               {'<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 10px; font-weight: bold; color: #334155;">Description</td><td style="padding: 10px; color: #334155;">' + str(task['description']) + '</td></tr>' if task['description'] else ''}
             </tbody>

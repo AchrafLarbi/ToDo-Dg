@@ -44,6 +44,9 @@
       <div class="flex flex-wrap gap-2 mt-3">
         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Priorité : {{ task.priority }}</span>
         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">Sensibilité : {{ task.sensitivity }}</span>
+        {% if task.recurrence_type and task.recurrence_type != 'Aucune' %}
+          <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200">Récurrence : {{ task.recurrence_type }}</span>
+        {% endif %}
         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Statut : {{ task.status }}</span>
         {{ deadline_badge(task) }}
       </div>
@@ -53,6 +56,9 @@
     <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6 space-y-3">
       <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Projet :</strong> {{ task.project_name or '-' }}</p>
       <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Échéance actuelle :</strong> {{ task.due_date or 'non définie' }}</p>
+      {% if task.status in ['Terminee', 'Cloturee', 'Terminé'] and task.closed_at %}
+        <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Date réelle de réalisation :</strong> <span class="font-bold text-emerald-700">{{ task.closed_at }}</span></p>
+      {% endif %}
       {% if task.description %}
         <p class="text-sm text-slate-700"><strong class="font-semibold text-slate-900">Description :</strong> {{ task.description }}</p>
       {% endif %}

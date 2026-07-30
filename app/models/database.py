@@ -8,6 +8,7 @@ import psycopg2.extras
 PRIORITIES = ['Basse', 'Normale', 'Haute', 'Urgente']
 SENSITIVITIES = ['Faible', 'Normale', 'Elevee', 'Critique']
 STATUSES = ['A faire', 'En cours', 'Terminee', 'Cloturee']
+RECURRENCE_TYPES = ['Aucune', 'Hebdomadaire', 'Mensuelle']
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS collaborators (
@@ -43,7 +44,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     closure_comment TEXT,
     last_reminder_at TEXT,
     reminder_count INTEGER DEFAULT 0,
-    update_token TEXT UNIQUE
+    update_token TEXT UNIQUE,
+    recurrence_type TEXT DEFAULT 'Aucune'
 );
 
 CREATE TABLE IF NOT EXISTS reminders (
@@ -99,6 +101,7 @@ def init_db():
     with conn.cursor() as cur:
         cur.execute(SCHEMA)
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_email TEXT")
+        cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_type TEXT DEFAULT 'Aucune'")
         cur.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
     conn.commit()
     conn.close()
@@ -327,16 +330,16 @@ def get_tache_by_token(token):
     return row
 
 
-def create_tache(title, description, project_id, collaborator_id, priority, sensitivity, due_date):
+def create_tache(title, description, project_id, collaborator_id, priority, sensitivity, due_date, recurrence_type='Aucune'):
     conn = get_db()
     token = secrets.token_urlsafe(32)
     with conn.cursor() as cur:
         cur.execute(
             """INSERT INTO tasks (title, description, project_id, collaborator_id, priority,
-               sensitivity, due_date, update_token)
-               VALUES (%s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+               sensitivity, due_date, update_token, recurrence_type)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
             (title, description or None, project_id or None, collaborator_id or None,
-             priority, sensitivity, due_date or None, token),
+             priority, sensitivity, due_date or None, token, recurrence_type or 'Aucune'),
         )
         new_id = cur.fetchone()['id']
     conn.commit()
@@ -344,14 +347,14 @@ def create_tache(title, description, project_id, collaborator_id, priority, sens
     return new_id
 
 
-def update_tache(task_id, title, description, project_id, collaborator_id, priority, sensitivity, due_date):
+def update_tache(task_id, title, description, project_id, collaborator_id, priority, sensitivity, due_date, recurrence_type='Aucune'):
     conn = get_db()
     with conn.cursor() as cur:
         cur.execute(
             """UPDATE tasks SET title=%s, description=%s, project_id=%s, collaborator_id=%s,
-               priority=%s, sensitivity=%s, due_date=%s WHERE id=%s""",
+               priority=%s, sensitivity=%s, due_date=%s, recurrence_type=%s WHERE id=%s""",
             (title, description or None, project_id or None, collaborator_id or None,
-             priority, sensitivity, due_date or None, task_id),
+             priority, sensitivity, due_date or None, recurrence_type or 'Aucune', task_id),
         )
     conn.commit()
     conn.close()
@@ -366,6 +369,8 @@ def update_statut(task_id, status, closure_comment, closed_at):
         )
     conn.commit()
     conn.close()
+    if status in ('Terminee', 'Cloturee', 'Terminé'):
+        process_task_recurrence(task_id)
 
 
 def collaborator_update_tache(task_id, new_status, new_due_date, comment):
@@ -374,11 +379,11 @@ def collaborator_update_tache(task_id, new_status, new_due_date, comment):
         cur.execute("SELECT status, due_date FROM tasks WHERE id = %s", (task_id,))
         current = cur.fetchone()
         closed_at = None
-        if new_status in ('Terminee', 'Cloturee'):
+        if new_status in ('Terminee', 'Cloturee', 'Terminé'):
             import datetime as _dt
-            closed_at = _dt.datetime.now().isoformat(timespec='seconds')
+            closed_at = _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cur.execute(
-            "UPDATE tasks SET status=%s, due_date=%s, closed_at=COALESCE(%s, closed_at) WHERE id=%s",
+            "UPDATE tasks SET status=%s, due_date=%s, closed_at=%s WHERE id=%s",
             (new_status, new_due_date or current['due_date'], closed_at, task_id),
         )
         cur.execute(
@@ -389,6 +394,69 @@ def collaborator_update_tache(task_id, new_status, new_due_date, comment):
         )
     conn.commit()
     conn.close()
+    if new_status in ('Terminee', 'Cloturee', 'Terminé'):
+        process_task_recurrence(task_id)
+
+
+def calculate_next_due_date(base_date_str, recurrence_type):
+    import datetime as _dt
+    import calendar as _calendar
+
+    if not base_date_str:
+        base_date = _dt.date.today()
+    else:
+        try:
+            base_date = _dt.datetime.strptime(base_date_str[:10], '%Y-%m-%d').date()
+        except Exception:
+            base_date = _dt.date.today()
+
+    if recurrence_type == 'Hebdomadaire':
+        next_date = base_date + _dt.timedelta(days=7)
+    elif recurrence_type == 'Mensuelle':
+        month = base_date.month % 12 + 1
+        year = base_date.year + (base_date.month // 12)
+        max_day = _calendar.monthrange(year, month)[1]
+        day = min(base_date.day, max_day)
+        next_date = _dt.date(year, month, day)
+    else:
+        return base_date_str
+
+    return next_date.isoformat()
+
+
+def process_task_recurrence(task_id):
+    task = get_tache(task_id)
+    if not task or task.get('recurrence_type') not in ('Hebdomadaire', 'Mensuelle'):
+        return None
+
+    # Calculate next due date
+    next_due = calculate_next_due_date(task.get('due_date'), task['recurrence_type'])
+
+    # Remove recurrence on the completed/old task so it doesn't trigger again
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE tasks SET recurrence_type = 'Aucune' WHERE id = %s", (task_id,))
+    conn.commit()
+    conn.close()
+
+    # Create new task instance for next occurrence
+    new_task_id = create_tache(
+        title=task['title'],
+        description=task['description'],
+        project_id=task['project_id'],
+        collaborator_id=task['collaborator_id'],
+        priority=task['priority'],
+        sensitivity=task['sensitivity'],
+        due_date=next_due,
+        recurrence_type=task['recurrence_type'],
+    )
+
+    # Automatically send email notification to collaborator for new occurrence
+    if task.get('collaborator_id'):
+        from app.services import send_task_notification_async
+        send_task_notification_async(new_task_id)
+
+    return new_task_id
 
 
 def delete_tache(task_id):

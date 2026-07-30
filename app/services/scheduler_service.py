@@ -22,6 +22,29 @@ def run_verification_echeances():
     if not settings:
         return 0, 0, []
 
+    # Auto-process recurring tasks that reached due date
+    all_tasks = database.list_taches()
+    for task in all_tasks:
+        rec_type = task.get('recurrence_type')
+        status = task.get('status')
+        due = task.get('due_date')
+        if rec_type in ('Hebdomadaire', 'Mensuelle') and status not in ('Terminee', 'Cloturee', 'Terminé') and due and due <= today_str:
+            next_due = database.calculate_next_due_date(due, rec_type)
+            database.update_tache(
+                task['id'],
+                title=task['title'],
+                description=task['description'],
+                project_id=task['project_id'],
+                collaborator_id=task['collaborator_id'],
+                priority=task['priority'],
+                sensitivity=task['sensitivity'],
+                due_date=next_due,
+                recurrence_type=rec_type,
+            )
+            if task.get('collaborator_id'):
+                from app.services.email_service import send_task_notification_async
+                send_task_notification_async(task['id'])
+
     days_before = settings['reminder_days_before'] or 2
     limit_date_str = (date.today() + timedelta(days=days_before)).isoformat()
     tasks = database.tasks_needing_reminder(today_str, limit_date_str)

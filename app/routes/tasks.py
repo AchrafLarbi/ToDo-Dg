@@ -3,7 +3,7 @@ from datetime import date, datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from markupsafe import Markup
 
-from app.models import database, PRIORITIES, SENSITIVITIES, STATUSES
+from app.models import database, PRIORITIES, SENSITIVITIES, STATUSES, RECURRENCE_TYPES
 from app.services import (
     send_task_notification_async,
     send_reminder,
@@ -55,6 +55,7 @@ def taches():
         PRIORITIES=PRIORITIES,
         SENSITIVITIES=SENSITIVITIES,
         STATUSES=STATUSES,
+        RECURRENCE_TYPES=RECURRENCE_TYPES,
         today=date.today().isoformat(),
         deadline_badge=deadline_badge,
     )
@@ -73,6 +74,7 @@ def ajouter_tache():
         priority=request.form.get('priority', 'Normale'),
         sensitivity=request.form.get('sensitivity', 'Normale'),
         due_date=request.form.get('due_date', '').strip(),
+        recurrence_type=request.form.get('recurrence_type', 'Aucune'),
     )
     send_task_notification_async(task_id)
     flash('Tâche créée.', 'success')
@@ -94,6 +96,7 @@ def detail_tache(id):
         PRIORITIES=PRIORITIES,
         SENSITIVITIES=SENSITIVITIES,
         STATUSES=STATUSES,
+        RECURRENCE_TYPES=RECURRENCE_TYPES,
         deadline_badge=deadline_badge,
     )
 
@@ -110,6 +113,7 @@ def modifier_tache(id):
             priority=request.form.get('priority', 'Normale'),
             sensitivity=request.form.get('sensitivity', 'Normale'),
             due_date=request.form.get('due_date', '').strip(),
+            recurrence_type=request.form.get('recurrence_type', 'Aucune'),
         )
         flash('Tâche mise à jour.', 'success')
     return redirect(url_for('tasks.detail_tache', id=id))
@@ -120,7 +124,7 @@ def changer_statut(id):
     comment = request.form.get('closure_comment', '').strip()
     closed_at = None
     if new_status in ('Terminee', 'Cloturee', 'Terminé'):
-        closed_at = datetime.now().isoformat(timespec='seconds')
+        closed_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     database.update_statut(id, new_status, comment, closed_at)
     flash('Statut mis à jour.', 'success')
     return redirect(url_for('tasks.detail_tache', id=id))
