@@ -8,20 +8,7 @@
 
 <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200/80 shadow-sm mb-6 space-y-6">
   <div class="border-b border-slate-100 pb-4">
-    <h2 class="text-lg font-bold text-slate-900">Envoi d'emails (Brevo recommandé, ou Outlook / Office 365)</h2>
-  </div>
-
-  <div class="p-4 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs sm:text-sm space-y-2">
-    <p class="font-bold flex items-center gap-2 text-emerald-800">
-      <svg class="w-4 h-4 text-emerald-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      Recommandé : Brevo (gratuit, 300 emails/jour, fonctionne partout)
-    </p>
-    <ol class="list-decimal list-inside space-y-1 text-emerald-800">
-      <li>Créez un compte sur <a href="https://www.brevo.com" target="_blank" class="underline font-semibold">brevo.com</a>.</li>
-      <li>Vérifiez votre adresse d'envoi dans <strong>Expéditeurs &amp; IP &gt; Expéditeurs</strong>.</li>
-      <li>Récupérez vos identifiants SMTP dans <strong>SMTP &amp; API &gt; SMTP</strong>.</li>
-      <li>Remplissez les champs ci-dessous : <strong>Serveur</strong> = <code class="bg-emerald-100 px-1 py-0.5 rounded font-mono">smtp-relay.brevo.com</code> &bull; <strong>Port</strong> = <code class="bg-emerald-100 px-1 py-0.5 rounded font-mono">587</code> &bull; <strong>Login SMTP</strong> = celui affiché par Brevo &bull; <strong>Clé SMTP</strong> = la clé générée.</li>
-    </ol>
+    <h2 class="text-lg font-bold text-slate-900">Envoi d'emails</h2>
   </div>
 
   <form method="post" action="{{ url_for('settings.parametres') }}" class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
