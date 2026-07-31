@@ -146,8 +146,8 @@ def _send_raw(to_addr, subject, body, html_body=None):
     if not to_addr:
         return False, "Aucun destinataire pour cet email."
 
-    # Si le fournisseur est Brevo, on utilise l'API REST HTTPS (Port 443) qui est 100% rapide et jamais bloquee sur Render
-    if 'brevo' in host.lower() or 'brevo' in user.lower():
+    # Si la clé est une clé API Brevo REST (xkeysib-), on utilise l'API REST HTTPS
+    if password.startswith('xkeysib-'):
         ok, msg_api = _send_brevo_api(to_addr, subject, body, html_body, sender_name, from_email, password)
         if ok:
             return True, msg_api
@@ -161,8 +161,8 @@ def _send_raw(to_addr, subject, body, html_body=None):
     if html_body:
         msg.add_alternative(html_body, subtype='html')
 
-    # Port 2525 en premier pour le cloud, puis port configure, puis 465, puis 587
-    ports_to_try = [2525, int(port), 465, 587]
+    # Priorité au port configuré, puis 587, 465, 2525
+    ports_to_try = [int(port), 587, 465, 2525]
     unique_ports = []
     for p in ports_to_try:
         if p not in unique_ports:
