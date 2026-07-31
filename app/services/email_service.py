@@ -137,7 +137,18 @@ def _send_raw(to_addr, subject, body, html_body=None):
     user = settings['smtp_user']
     password = settings['smtp_password']
     sender_name = settings['sender_name'] or 'Gestion des taches'
-    from_email = settings.get('sender_email') or user
+    configured_sender = settings.get('sender_email') or user
+    reply_to_email = None
+
+    # Si l'expéditeur configuré est une adresse publique (@gmail.com, @yahoo.com, etc.),
+    # l'envoi via Brevo échoue aux contrôles anti-spoofing DMARC/SPF des serveurs d'entreprise (ex. @amimer.com).
+    # On utilise l'adresse de compte SMTP pour le header From pour passer SPF/DMARC et on ajoute Reply-To.
+    if configured_sender and any(domain in configured_sender.lower() for domain in ['@gmail.', '@yahoo.', '@hotmail.', '@outlook.', '@icloud.']):
+        from_email = user
+        reply_to_email = configured_sender
+    else:
+        from_email = configured_sender
+        reply_to_email = configured_sender
 
     if not host:
         return False, "Serveur SMTP non configuré dans les paramètres."
@@ -155,6 +166,8 @@ def _send_raw(to_addr, subject, body, html_body=None):
     msg = EmailMessage()
     msg['Subject'] = subject
     msg['From'] = f"{sender_name} <{from_email}>"
+    if reply_to_email and reply_to_email != from_email:
+        msg['Reply-To'] = reply_to_email
     msg['To'] = to_addr
     msg.set_content(body)
 
