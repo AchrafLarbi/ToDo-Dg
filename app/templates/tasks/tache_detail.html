@@ -132,19 +132,35 @@
 </div>
 
 <!-- Manual Reminder Card -->
+<!-- Manual Reminder Card -->
 <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
-  <h2 class="text-base font-bold text-slate-900 mb-2">Relance manuelle par email</h2>
-  {% if task.collaborator_email %}
-    <p class="text-xs text-slate-500 mb-4">Destinataire : <strong>{{ task.collaborator_name }}</strong> ({{ task.collaborator_email }}) &bull; {{ task.reminder_count }} relance(s) envoyée(s) au total.</p>
-    <form method="post" action="{{ url_for('tasks.relancer_tache', id=task.id) }}">
-      <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-colors">
-        Envoyer une relance maintenant
-      </button>
-    </form>
+  <h2 class="text-base font-bold text-slate-900 mb-2">Relances manuelles (Email & WhatsApp)</h2>
+  {% if task.collaborator_id %}
+    <p class="text-xs text-slate-500 mb-4">
+      Destinataire : <strong>{{ task.collaborator_name }}</strong> &bull; Email: {{ task.collaborator_email or 'Non renseigné' }} &bull; Tél: {{ task.collaborator_phone or 'Non renseigné' }} &bull; {{ task.reminder_count }} relance(s) effectuée(s).
+    </p>
+    <div class="flex flex-wrap items-center gap-3">
+      {% if task.collaborator_email %}
+        <form method="post" action="{{ url_for('tasks.relancer_tache', id=task.id) }}">
+          <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl transition-colors cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            Relancer par Email
+          </button>
+        </form>
+      {% endif %}
+
+      <form method="post" action="{{ url_for('tasks.relancer_whatsapp', id=task.id) }}" target="_blank">
+        <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all cursor-pointer">
+          <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l.2.321-.996 3.639 3.737-.98.302.19z"/></svg>
+          Relancer sur WhatsApp
+        </button>
+      </form>
+    </div>
   {% else %}
-    <p class="text-xs text-slate-500">Aucun collaborateur avec email n'est assigné à cette tâche.</p>
+    <p class="text-xs text-slate-500">Aucun collaborateur n'est assigné à cette tâche.</p>
   {% endif %}
 </div>
+
 
 <!-- Email History -->
 <div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">

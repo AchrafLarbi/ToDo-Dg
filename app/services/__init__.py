@@ -14,6 +14,8 @@ from .scheduler_service import (
     run_verification_echeances,
 )
 
+from .whatsapp_service import send_whatsapp_relance
+
 __all__ = [
     'send_test_email',
     'send_task_notification',
@@ -22,7 +24,9 @@ __all__ = [
     'send_overdue_digest_to_collaborator',
     'notify_admin_of_collaborator_update',
     'notify_admin_async',
+    'send_whatsapp_relance',
     'start_scheduler',
     'reschedule_scheduler',
     'run_verification_echeances',
 ]
+

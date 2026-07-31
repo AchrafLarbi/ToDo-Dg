@@ -6,14 +6,21 @@
   <p class="text-slate-500 text-sm mt-1">Gérez, créez et filtrez toutes les tâches de l'organisation</p>
 </div>
 
-<!-- Creation Form Card -->
-<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
-  <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
-    Créer une nouvelle tâche
-  </h2>
+<!-- Creation Form Card (Collapsible) -->
+<div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-5 overflow-hidden">
+  <div class="p-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between cursor-pointer" onclick="document.getElementById('create-task-form-body').classList.toggle('hidden')">
+    <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+      <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"></path></svg>
+      Créer une nouvelle tâche
+    </h2>
+    <button type="button" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">
+      + Afficher / Masquer le formulaire
+    </button>
+  </div>
   
-  <form method="post" action="{{ url_for('tasks.ajouter_tache') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <div id="create-task-form-body" class="p-5">
+    <form method="post" action="{{ url_for('tasks.ajouter_tache') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+
     <div class="md:col-span-2 lg:col-span-3">
       <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Titre de la tâche</label>
       <input type="text" name="title" required placeholder="Ex. Préparer la présentation pour le client" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
@@ -123,75 +130,147 @@
 
 <!-- Tasks Table -->
 {% if tasks %}
-<div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
-  <div class="overflow-x-auto">
-    <table class="w-full text-left text-sm text-slate-600">
-      <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-        <tr>
-          <th class="px-6 py-4">Titre</th>
-          <th class="px-6 py-4">Projet</th>
-          <th class="px-6 py-4">Collaborateur</th>
-          <th class="px-6 py-4">Priorité</th>
-          <th class="px-6 py-4">Récurrence</th>
-          <th class="px-6 py-4">Échéance</th>
-          <th class="px-6 py-4">Date réalisation</th>
-          <th class="px-6 py-4">Statut</th>
-          <th class="px-6 py-4">Action</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-100">
-      {% for t in tasks %}
-        <tr class="hover:bg-slate-50/80 transition-colors {{ 'bg-rose-50/50' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
-          <td class="px-6 py-4 font-semibold text-slate-900">
-            <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-indigo-600 transition-colors">{{ t.title }}</a>
-          </td>
-          <td class="px-6 py-4">{{ t.project_name or '-' }}</td>
-          <td class="px-6 py-4">{{ t.collaborator_name or '-' }}</td>
-          <td class="px-6 py-4">
-            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-rose-50 text-rose-700 border border-rose-200' if t.priority == 'Urgente' else ('bg-amber-50 text-amber-700 border border-amber-200' if t.priority == 'Haute' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
-              {{ t.priority }}
-            </span>
-          </td>
-          <td class="px-6 py-4">
-            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-purple-50 text-purple-700 border border-purple-200' if t.recurrence_type in ['Hebdomadaire','Mensuelle'] else 'bg-slate-100 text-slate-600 border border-slate-200' }}">
-              {{ t.recurrence_type or 'Aucune' }}
-            </span>
-          </td>
-          <td class="px-6 py-4 {{ 'font-bold text-rose-600' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
-            {{ t.due_date or '-' }} {{ deadline_badge(t) }}
-          </td>
-          <td class="px-6 py-4">
-            {% if t.status in ['Terminee', 'Cloturee', 'Terminé'] and t.closed_at %}
-              <div class="flex flex-col">
-                <span class="font-medium text-slate-900">{{ t.closed_at[:10] }}</span>
-                {% if t.due_date %}
-                  {% if t.closed_at[:10] <= t.due_date %}
-                    <span class="inline-flex items-center text-[10px] font-bold text-emerald-600">✓ À temps</span>
-                  {% else %}
-                    <span class="inline-flex items-center text-[10px] font-bold text-rose-600">⚠ En retard</span>
-                  {% endif %}
-                {% endif %}
-              </div>
-            {% else %}
-              <span class="text-slate-400">-</span>
-            {% endif %}
-          </td>
-          <td class="px-6 py-4">
-            <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700 border border-emerald-200' if t.status == 'Terminee' or t.status == 'Terminée' else ('bg-indigo-50 text-indigo-700 border border-indigo-200' if t.status == 'En cours' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
-              {{ t.status }}
-            </span>
-          </td>
-          <td class="px-6 py-4">
-            <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors">
-              Voir
-            </a>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
+<form id="bulk-tasks-form" method="post" action="{{ url_for('tasks.supprimer_bulk_taches') }}">
+  <!-- Bulk Actions Bar -->
+  <div id="bulk-actions-bar" class="hidden mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center justify-between shadow-xs">
+    <div class="flex items-center gap-2 text-sm font-semibold text-indigo-900">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      <span id="selected-count-text">0 tâche(s) sélectionnée(s)</span>
+    </div>
+    <button type="submit" onclick="return confirm('Êtes-vous sûr de vouloir supprimer définitivement les tâches sélectionnées ?');" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-lg transition-all shadow-sm cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+      Supprimer la sélection
+    </button>
   </div>
-</div>
+
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-sm text-slate-600" id="tasks-table">
+        <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <tr>
+            <th class="px-4 py-3.5 w-10 text-center">
+              <input type="checkbox" id="select-all-tasks" title="Tout sélectionner" class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+            </th>
+            <th class="px-4 py-3.5">Titre</th>
+            <th class="px-4 py-3.5">Projet</th>
+            <th class="px-4 py-3.5">Collaborateur</th>
+            <th class="px-4 py-3.5">Priorité</th>
+            <th class="px-4 py-3.5">Récurrence</th>
+            <th class="px-4 py-3.5">Échéance</th>
+            <th class="px-4 py-3.5">Date réalisation</th>
+            <th class="px-4 py-3.5">Statut</th>
+            <th class="px-4 py-3.5 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+        {% for t in tasks %}
+          <tr class="task-row hover:bg-slate-50/80 transition-colors {{ 'bg-rose-50/50' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+            <td class="px-4 py-3 text-center">
+              <input type="checkbox" name="task_ids" value="{{ t.id }}" class="task-checkbox w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+            </td>
+            <td class="px-4 py-3 font-semibold text-slate-900 search-target">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-indigo-600 transition-colors">{{ t.title }}</a>
+            </td>
+            <td class="px-4 py-3 search-target">{{ t.project_name or '-' }}</td>
+            <td class="px-4 py-3 search-target">{{ t.collaborator_name or '-' }}</td>
+            <td class="px-4 py-3">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-rose-50 text-rose-700 border border-rose-200' if t.priority == 'Urgente' else ('bg-amber-50 text-amber-700 border border-amber-200' if t.priority == 'Haute' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
+                {{ t.priority }}
+              </span>
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-purple-50 text-purple-700 border border-purple-200' if t.recurrence_type and t.recurrence_type != 'Aucune' else 'bg-slate-100 text-slate-600 border border-slate-200' }}">
+                {{ t.recurrence_type or 'Aucune' }}
+              </span>
+            </td>
+            <td class="px-4 py-3 {{ 'font-bold text-rose-600' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+              {{ t.due_date or '-' }} {{ deadline_badge(t) }}
+            </td>
+            <td class="px-4 py-3">
+              {% if t.status in ['Terminee', 'Cloturee', 'Terminé'] and t.closed_at %}
+                <div class="flex flex-col">
+                  <span class="font-medium text-slate-900">{{ t.closed_at[:10] }}</span>
+                  {% if t.due_date %}
+                    {% if t.closed_at[:10] <= t.due_date %}
+                      <span class="inline-flex items-center text-[10px] font-bold text-emerald-600">✓ À temps</span>
+                    {% else %}
+                      <span class="inline-flex items-center text-[10px] font-bold text-rose-600">⚠ En retard</span>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              {% else %}
+                <span class="text-slate-400">-</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3 search-target">
+              <span class="px-2.5 py-1 rounded-full text-xs font-semibold {{ 'bg-emerald-50 text-emerald-700 border border-emerald-200' if t.status in ['Terminee','Terminée','Cloturee'] else ('bg-indigo-50 text-indigo-700 border border-indigo-200' if t.status == 'En cours' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
+                {{ t.status }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <div class="inline-flex items-center gap-1.5 justify-end">
+                <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors">
+                  Voir
+                </a>
+                <button type="submit" form="direct-delete-form-{{ t.id }}" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                  Supprimer
+                </button>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</form>
+
+<!-- Separate Direct Delete Forms to prevent nested forms -->
+{% for t in tasks %}
+<form id="direct-delete-form-{{ t.id }}" method="post" action="{{ url_for('tasks.supprimer_tache', id=t.id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer directement la tâche « {{ t.title|escape }} » ?');">
+</form>
+{% endfor %}
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all-tasks');
+    const taskCheckboxes = document.querySelectorAll('.task-checkbox');
+    const bulkBar = document.getElementById('bulk-actions-bar');
+    const countText = document.getElementById('selected-count-text');
+
+    function updateBulkBar() {
+      const checkedCount = document.querySelectorAll('.task-checkbox:checked').length;
+      if (checkedCount > 0) {
+        bulkBar.classList.remove('hidden');
+        countText.textContent = checkedCount + ' tâche(s) sélectionnée(s)';
+      } else {
+        bulkBar.classList.add('hidden');
+      }
+      if (selectAll) {
+        selectAll.checked = (checkedCount > 0 && checkedCount === taskCheckboxes.length);
+      }
+    }
+
+    if (selectAll) {
+      selectAll.addEventListener('change', function() {
+        taskCheckboxes.forEach(cb => {
+          // Only check visible tasks if filtered
+          const tr = cb.closest('tr');
+          if (!tr || tr.style.display !== 'none') {
+            cb.checked = selectAll.checked;
+          }
+        });
+        updateBulkBar();
+      });
+    }
+
+    taskCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkBar);
+    });
+  });
+</script>
 {% else %}
 <div class="bg-white p-8 rounded-2xl border border-slate-200/80 text-center text-slate-500 text-sm">
   Aucune tâche ne correspond à ces filtres.
@@ -199,3 +278,4 @@
 {% endif %}
 
 {% endblock %}
+

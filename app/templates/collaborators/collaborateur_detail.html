@@ -1,85 +1,232 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+<!-- Include Chart.js via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Header & Collaborator Switcher -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
   <div>
-    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ collaborateur.name }}</h1>
-    <p class="text-slate-500 text-sm mt-1">Informations personnelles et liste des tâches assignées</p>
+    <div class="flex items-center gap-2">
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ collaborateur.name }}</h1>
+      <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800 border border-indigo-200">
+        Rapport & Statistiques
+      </span>
+    </div>
+    <p class="text-slate-500 text-xs sm:text-sm mt-1 flex items-center gap-3 flex-wrap">
+      <span>📧 {{ collaborateur.email }}</span>
+      {% if collaborateur.phone %}
+        <span>📱 {{ collaborateur.phone }}</span>
+      {% endif %}
+    </p>
   </div>
-  <a href="{{ url_for('collaborators.collaborateurs') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition-colors">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-    Retour à la liste
-  </a>
+
+  <div class="flex items-center gap-3">
+    <!-- Collaborator Selector Dropdown -->
+    <select onchange="if(this.value) window.location.href='/collaborateurs/' + this.value;" class="px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-xs">
+      <option value="">-- Choisir un collaborateur --</option>
+      {% for c in all_collaborateurs %}
+        <option value="{{ c.id }}" {{ 'selected' if c.id == collaborateur.id }}>{{ c.name }}</option>
+      {% endfor %}
+    </select>
+
+    <a href="{{ url_for('collaborators.collaborateurs') }}" class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+      Retour
+    </a>
+  </div>
 </div>
 
-<!-- Edit Form Card -->
-<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6">
-  <h2 class="text-base font-bold text-slate-900 mb-4">Modifier les informations</h2>
+<!-- Key Performance Indicators (KPI Cards) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <!-- Total & Completion -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Tâches Total</span>
+      <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+      </div>
+    </div>
+    <div class="mt-3">
+      <div class="text-2xl font-extrabold text-slate-900">{{ stats.total }}</div>
+      <div class="text-xs text-slate-500 mt-0.5">
+        <span class="font-bold text-emerald-600">{{ stats.completed }} clôturée(s)</span> ({{ stats.completion_rate }}%)
+      </div>
+    </div>
+  </div>
+
+  <!-- Delay / Average Resolution -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Délai Moyen Règlement</span>
+      <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <div class="mt-3">
+      <div class="text-2xl font-extrabold text-slate-900">{{ stats.avg_resolution_days }} <span class="text-sm font-semibold text-slate-500">jour(s)</span></div>
+      <div class="text-xs text-slate-500 mt-0.5">Temps moyen de traitement</div>
+    </div>
+  </div>
+
+  <!-- Longest Task -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Tâche la plus longue</span>
+      <div class="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </div>
+    </div>
+    <div class="mt-3">
+      {% if stats.longest_task %}
+        <div class="text-sm font-bold text-slate-900 truncate" title="{{ stats.longest_task.title }}">{{ stats.longest_task.title }}</div>
+        <div class="text-xs text-purple-700 font-semibold mt-0.5">Durée : {{ stats.longest_task.duration_days }} jour(s)</div>
+      {% else %}
+        <div class="text-sm font-bold text-slate-400">Aucune tâche clôturée</div>
+        <div class="text-xs text-slate-400 mt-0.5">-</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- On Time Compliance -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+    <div class="flex items-center justify-between">
+      <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Respect des Délais</span>
+      <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+    <div class="mt-3">
+      <div class="text-2xl font-extrabold text-emerald-600">{{ stats.on_time_rate }}%</div>
+      <div class="text-xs text-slate-500 mt-0.5">
+        <span class="text-emerald-700 font-bold">{{ stats.completed_on_time }} à temps</span> &bull; <span class="text-rose-600 font-bold">{{ stats.completed_late }} en retard</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Charts Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+  <!-- Status Doughnut Chart -->
+  <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+      <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path></svg>
+      Répartition des Tâches par Statut
+    </h3>
+    <div class="h-56 relative">
+      <canvas id="statusChart"
+        data-afaire="{{ stats.status_counts.get('A faire', 0) }}"
+        data-encours="{{ stats.status_counts.get('En cours', 0) }}"
+        data-terminee="{{ stats.status_counts.get('Terminee', 0) }}"
+        data-cloturee="{{ stats.status_counts.get('Cloturee', 0) }}">
+      </canvas>
+    </div>
+  </div>
+
+  <!-- Priority Bar Chart -->
+  <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
+    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2">
+      <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+      Répartition des Tâches par Priorité
+    </h3>
+    <div class="h-56 relative">
+      <canvas id="priorityChart"
+        data-basse="{{ stats.priority_counts.get('Basse', 0) }}"
+        data-normale="{{ stats.priority_counts.get('Normale', 0) }}"
+        data-haute="{{ stats.priority_counts.get('Haute', 0) }}"
+        data-urgente="{{ stats.priority_counts.get('Urgente', 0) }}">
+      </canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Information Edit Card (Collapsible) -->
+<div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs mb-6 overflow-hidden">
+  <div class="p-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between cursor-pointer" onclick="document.getElementById('edit-collab-body').classList.toggle('hidden')">
+    <h2 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+      <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+      Modifier les coordonnées du collaborateur
+    </h2>
+    <span class="text-xs text-indigo-600 font-semibold">Afficher / Masquer</span>
+  </div>
   
-  <form method="post" action="{{ url_for('collaborators.modifier_collaborateur', id=collaborateur.id) }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-    <div>
-      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nom</label>
-      <input type="text" name="name" value="{{ collaborateur.name }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-    </div>
+  <div id="edit-collab-body" class="hidden p-5">
+    <form method="post" action="{{ url_for('collaborators.modifier_collaborateur', id=collaborateur.id) }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Nom complet</label>
+        <input type="text" name="name" value="{{ collaborateur.name }}" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      </div>
 
-    <div>
-      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Email</label>
-      <input type="email" name="email" value="{{ collaborateur.email }}" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-    </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Adresse Email</label>
+        <input type="email" name="email" value="{{ collaborateur.email }}" required class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      </div>
 
-    <div>
-      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Téléphone</label>
-      <input type="text" name="phone" value="{{ collaborateur.phone or '' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-    </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Numéro Téléphone (WhatsApp)</label>
+        <input type="text" name="phone" value="{{ collaborateur.phone or '' }}" placeholder="Ex: +213600000000" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      </div>
 
-    <div class="md:col-span-3 flex items-center justify-between pt-2">
-      <button type="submit" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
-        Enregistrer les modifications
-      </button>
-    </div>
-  </form>
+      <div class="md:col-span-3 flex items-center justify-between pt-2">
+        <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-all">
+          Enregistrer les modifications
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
-<div class="mb-6">
-  <form method="post" action="{{ url_for('collaborators.supprimer_collaborateur', id=collaborateur.id) }}" onsubmit="return confirm('Supprimer ce collaborateur ? Ses tâches seront désassignées.');">
-    <button type="submit" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-xs rounded-xl transition-colors">
-      Supprimer ce collaborateur
-    </button>
-  </form>
-</div>
-
-<!-- Assigned Tasks -->
+<!-- Assigned Tasks Table -->
 <div class="mb-8">
-  <h2 class="text-xl font-bold text-slate-900 tracking-tight mb-4">Tâches assignées</h2>
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-bold text-slate-900 tracking-tight">Tâches assignées à {{ collaborateur.name }}</h2>
+    <span class="text-xs font-semibold text-slate-500">{{ tasks|length }} tâche(s) au total</span>
+  </div>
   
   {% if tasks %}
-  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full text-left text-sm text-slate-600">
-        <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+      <table class="w-full text-left text-xs text-slate-600">
+        <thead class="bg-slate-50 border-b border-slate-200 font-semibold text-slate-500 uppercase tracking-wider">
           <tr>
-            <th class="px-6 py-4">Titre</th>
-            <th class="px-6 py-4">Projet</th>
-            <th class="px-6 py-4">Priorité</th>
-            <th class="px-6 py-4">Sensibilité</th>
-            <th class="px-6 py-4">Échéance</th>
-            <th class="px-6 py-4">Statut</th>
-            <th class="px-6 py-4">Action</th>
+            <th class="px-4 py-3">Titre</th>
+            <th class="px-4 py-3">Projet</th>
+            <th class="px-4 py-3">Priorité</th>
+            <th class="px-4 py-3">Échéance</th>
+            <th class="px-4 py-3">Date Réalisation</th>
+            <th class="px-4 py-3">Statut</th>
+            <th class="px-4 py-3 text-right">Actions</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
         {% for t in tasks %}
-          <tr class="hover:bg-slate-50/80 transition-colors {{ 'bg-rose-50/50' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee'] else '' }}">
-            <td class="px-6 py-4 font-semibold text-slate-900">
+          <tr class="hover:bg-slate-50/80 transition-colors {{ 'bg-rose-50/50' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+            <td class="px-4 py-3 font-semibold text-slate-900">
               <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-indigo-600 transition-colors">{{ t.title }}</a>
             </td>
-            <td class="px-6 py-4">{{ t.project_name or '-' }}</td>
-            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ t.priority }}</span></td>
-            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ t.sensitivity }}</span></td>
-            <td class="px-6 py-4">{{ t.due_date or '-' }} {{ deadline_badge(t) }}</td>
-            <td class="px-6 py-4"><span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">{{ t.status }}</span></td>
-            <td class="px-6 py-4">
-              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors">
+            <td class="px-4 py-3">{{ t.project_name or '-' }}</td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full font-semibold {{ 'bg-rose-50 text-rose-700 border border-rose-200' if t.priority == 'Urgente' else ('bg-amber-50 text-amber-700 border border-amber-200' if t.priority == 'Haute' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
+                {{ t.priority }}
+              </span>
+            </td>
+            <td class="px-4 py-3 {{ 'font-bold text-rose-600' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+              {{ t.due_date or '-' }} {{ deadline_badge(t) }}
+            </td>
+            <td class="px-4 py-3">
+              {% if t.status in ['Terminee', 'Cloturee', 'Terminé'] and t.closed_at %}
+                <span class="font-semibold text-slate-800">{{ t.closed_at[:10] }}</span>
+              {% else %}
+                <span class="text-slate-400">-</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-3">
+              <span class="px-2 py-0.5 rounded-full font-semibold {{ 'bg-emerald-50 text-emerald-700 border border-emerald-200' if t.status in ['Terminee','Terminée','Cloturee'] else ('bg-indigo-50 text-indigo-700 border border-indigo-200' if t.status == 'En cours' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
+                {{ t.status }}
+              </span>
+            </td>
+            <td class="px-4 py-3 text-right">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors">
                 Voir
               </a>
             </td>
@@ -90,10 +237,78 @@
     </div>
   </div>
   {% else %}
-  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 text-slate-500 text-sm">
-    Aucune tâche assignée à ce collaborateur.
+  <div class="bg-white p-6 rounded-2xl border border-slate-200/80 text-slate-500 text-xs text-center">
+    Aucune tâche n'est actuellement assignée à ce collaborateur.
   </div>
   {% endif %}
 </div>
+
+<!-- Chart Initialization Script -->
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const sEl = document.getElementById('statusChart');
+    if (sEl) {
+      const sCtx = sEl.getContext('2d');
+      new Chart(sCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['À faire', 'En cours', 'Terminée', 'Clôturée'],
+          datasets: [{
+            data: [
+              parseInt(sEl.dataset.afaire || '0'),
+              parseInt(sEl.dataset.encours || '0'),
+              parseInt(sEl.dataset.terminee || '0'),
+              parseInt(sEl.dataset.cloturee || '0')
+            ],
+            backgroundColor: ['#94a3b8', '#6366f1', '#10b981', '#059669'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    const pEl = document.getElementById('priorityChart');
+    if (pEl) {
+      const pCtx = pEl.getContext('2d');
+      new Chart(pCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Basse', 'Normale', 'Haute', 'Urgente'],
+          datasets: [{
+            label: 'Nombre de tâches',
+            data: [
+              parseInt(pEl.dataset.basse || '0'),
+              parseInt(pEl.dataset.normale || '0'),
+              parseInt(pEl.dataset.haute || '0'),
+              parseInt(pEl.dataset.urgente || '0')
+            ],
+            backgroundColor: ['#cbd5e1', '#818cf8', '#f59e0b', '#f43f5e'],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } } },
+            x: { ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+  });
+</script>
+
 
 {% endblock %}

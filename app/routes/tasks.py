@@ -135,11 +135,41 @@ def relancer_tache(id):
     flash(message, 'success' if success else 'danger')
     return redirect(url_for('tasks.detail_tache', id=id))
 
+@tasks_bp.route('/taches/<int:id>/relancer_whatsapp', methods=['POST'])
+def relancer_whatsapp(id):
+    from app.services import send_whatsapp_relance
+    success, message, wa_url = send_whatsapp_relance(id)
+    if success and wa_url:
+        flash("La relance WhatsApp a été préparée. Redirection vers WhatsApp...", "success")
+        return redirect(wa_url)
+    else:
+        flash(message, "danger")
+        return redirect(url_for('tasks.detail_tache', id=id))
+
+
 @tasks_bp.route('/taches/<int:id>/supprimer', methods=['POST'])
+@tasks_bp.route('/taches/<int:id>/supprimer_direct', methods=['POST'])
 def supprimer_tache(id):
     database.delete_tache(id)
-    flash('Tâche supprimée.', 'success')
+    flash('Tâche supprimée avec succès.', 'success')
     return redirect(url_for('tasks.taches'))
+
+@tasks_bp.route('/taches/supprimer_bulk', methods=['POST'])
+def supprimer_bulk_taches():
+    task_ids = request.form.getlist('task_ids')
+    if not task_ids:
+        flash('Aucune tâche sélectionnée.', 'warning')
+        return redirect(url_for('tasks.taches'))
+    count = 0
+    for tid in task_ids:
+        try:
+            database.delete_tache(int(tid))
+            count += 1
+        except Exception:
+            pass
+    flash(f'{count} tâche(s) supprimée(s) avec succès.', 'success')
+    return redirect(url_for('tasks.taches'))
+
 
 # ---- Vue publique collaborateur ---------------------------------------------
 

@@ -8,7 +8,18 @@ import psycopg2.extras
 PRIORITIES = ['Basse', 'Normale', 'Haute', 'Urgente']
 SENSITIVITIES = ['Faible', 'Normale', 'Elevee', 'Critique']
 STATUSES = ['A faire', 'En cours', 'Terminee', 'Cloturee']
-RECURRENCE_TYPES = ['Aucune', 'Hebdomadaire', 'Mensuelle']
+RECURRENCE_TYPES = [
+    'Aucune',
+    'Hebdomadaire',
+    'Mensuelle',
+    'Chaque 1er du mois',
+    'Chaque 5 du mois',
+    'Chaque 10 du mois',
+    'Chaque 15 du mois',
+    'Chaque 20 du mois',
+    'Chaque 25 du mois',
+]
+
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS collaborators (
@@ -401,6 +412,7 @@ def collaborator_update_tache(task_id, new_status, new_due_date, comment):
 def calculate_next_due_date(base_date_str, recurrence_type):
     import datetime as _dt
     import calendar as _calendar
+    import re
 
     if not base_date_str:
         base_date = _dt.date.today()
@@ -418,6 +430,17 @@ def calculate_next_due_date(base_date_str, recurrence_type):
         max_day = _calendar.monthrange(year, month)[1]
         day = min(base_date.day, max_day)
         next_date = _dt.date(year, month, day)
+    elif recurrence_type and ('Chaque' in recurrence_type or 'du mois' in recurrence_type or 'jour' in recurrence_type):
+        # Extract target day number X (e.g. "Chaque 5 du mois" -> 5)
+        match = re.search(r'\d+', recurrence_type)
+        target_day = int(match.group()) if match else 1
+        target_day = max(1, min(31, target_day))
+
+        month = base_date.month % 12 + 1
+        year = base_date.year + (base_date.month // 12)
+        max_day = _calendar.monthrange(year, month)[1]
+        day = min(target_day, max_day)
+        next_date = _dt.date(year, month, day)
     else:
         return base_date_str
 
@@ -426,8 +449,9 @@ def calculate_next_due_date(base_date_str, recurrence_type):
 
 def process_task_recurrence(task_id):
     task = get_tache(task_id)
-    if not task or task.get('recurrence_type') not in ('Hebdomadaire', 'Mensuelle'):
+    if not task or not task.get('recurrence_type') or task.get('recurrence_type') == 'Aucune':
         return None
+
 
     # Calculate next due date
     next_due = calculate_next_due_date(task.get('due_date'), task['recurrence_type'])
@@ -602,3 +626,95 @@ def tasks_needing_reminder(today, limit_date):
         rows = cur.fetchall()
     conn.close()
     return rows
+
+
+def get_collaborateur_stats(collaborator_id):
+    import datetime as _dt
+    today_str = _dt.date.today().isoformat()
+    tasks = list_taches_by_collaborateur(collaborator_id)
+
+    total = len(tasks)
+    active = 0
+    completed = 0
+    overdue = 0
+    completed_on_time = 0
+    completed_late = 0
+
+    status_counts = {'A faire': 0, 'En cours': 0, 'Terminee': 0, 'Cloturee': 0}
+    priority_counts = {'Basse': 0, 'Normale': 0, 'Haute': 0, 'Urgente': 0}
+
+    total_resolution_seconds = 0
+    resolution_count = 0
+    longest_task = None
+    max_duration_seconds = -1
+
+    for t in tasks:
+        st = t.get('status')
+        pr = t.get('priority', 'Normale')
+        if pr in priority_counts:
+            priority_counts[pr] += 1
+
+        is_closed = st in ('Terminee', 'Cloturee', 'Terminé')
+        if is_closed:
+            completed += 1
+            if st in status_counts:
+                status_counts[st] += 1
+            else:
+                status_counts['Terminee'] += 1
+
+            due = t.get('due_date')
+            closed_at_str = t.get('closed_at')
+            if due and closed_at_str:
+                closed_date = closed_at_str[:10]
+                if closed_date <= due:
+                    completed_on_time += 1
+                else:
+                    completed_late += 1
+            else:
+                completed_on_time += 1
+
+            if closed_at_str and t.get('created_at'):
+                try:
+                    c_dt = t['created_at'] if isinstance(t['created_at'], _dt.datetime) else _dt.datetime.strptime(str(t['created_at'])[:19], '%Y-%m-%d %H:%M:%S')
+                    cl_dt = _dt.datetime.strptime(str(closed_at_str)[:19], '%Y-%m-%d %H:%M:%S')
+                    diff_sec = (cl_dt - c_dt).total_seconds()
+                    if diff_sec >= 0:
+                        total_resolution_seconds += diff_sec
+                        resolution_count += 1
+                        if diff_sec > max_duration_seconds:
+                            max_duration_seconds = diff_sec
+                            duration_days = round(diff_sec / 86400.0, 1)
+                            longest_task = {
+                                'title': t['title'],
+                                'duration_days': duration_days if duration_days >= 0.1 else 0.1,
+                                'closed_at': closed_at_str[:10]
+                            }
+                except Exception:
+                    pass
+        else:
+            active += 1
+            if st in status_counts:
+                status_counts[st] += 1
+            due = t.get('due_date')
+            if due and due < today_str:
+                overdue += 1
+
+    avg_resolution_days = round((total_resolution_seconds / resolution_count) / 86400.0, 1) if resolution_count > 0 else 0
+    completion_rate = round((completed / total * 100), 1) if total > 0 else 0
+    on_time_rate = round((completed_on_time / completed * 100), 1) if completed > 0 else 0
+
+    return {
+        'total': total,
+        'active': active,
+        'completed': completed,
+        'overdue': overdue,
+        'completed_on_time': completed_on_time,
+        'completed_late': completed_late,
+        'completion_rate': completion_rate,
+        'on_time_rate': on_time_rate,
+        'avg_resolution_days': avg_resolution_days,
+        'longest_task': longest_task,
+        'status_counts': status_counts,
+        'priority_counts': priority_counts
+    }
+

@@ -30,13 +30,18 @@ def detail_collaborateur(id):
         flash('Collaborateur introuvable.', 'danger')
         return redirect(url_for('collaborators.collaborateurs'))
     tasks = database.list_taches_by_collaborateur(id)
+    stats = database.get_collaborateur_stats(id)
+    all_collabs = database.list_collaborateurs()
     return render_template(
         'collaborators/collaborateur_detail.html',
         collaborateur=collab,
+        all_collaborateurs=all_collabs,
         tasks=tasks,
+        stats=stats,
         today=date.today().isoformat(),
         deadline_badge=deadline_badge,
     )
+
 
 @collaborators_bp.route('/collaborateurs/<int:id>/modifier', methods=['POST'])
 def modifier_collaborateur(id):
