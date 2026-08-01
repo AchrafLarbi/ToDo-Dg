@@ -17,8 +17,10 @@ def slugify(value):
     return str(value).strip().lower().replace(' ', '-')
 
 def deadline_badge(task):
-    due = task.get('due_date')
-    status = task.get('status')
+    if not task:
+        return Markup('')
+    due = task.get('due_date') if hasattr(task, 'get') else getattr(task, 'due_date', None)
+    status = task.get('status') if hasattr(task, 'get') else getattr(task, 'status', None)
     if not due or status in ('Terminee', 'Cloturee', 'Terminé'):
         return Markup('')
     today = date.today().isoformat()
@@ -31,6 +33,11 @@ def deadline_badge(task):
     if due <= limit:
         return Markup('<span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">Échéance proche</span>')
     return Markup('')
+
+@tasks_bp.app_context_processor
+def utility_processor():
+    return dict(deadline_badge=deadline_badge)
+
 
 @tasks_bp.route('/taches')
 def taches():
@@ -138,12 +145,13 @@ def relancer_tache(id):
 @tasks_bp.route('/taches/<int:id>/relancer_whatsapp', methods=['POST'])
 def relancer_whatsapp(id):
     from app.services import send_whatsapp_relance
-    success, message, wa_url = send_whatsapp_relance(id)
+    phone_input = request.form.get('phone', '').strip() or request.args.get('phone', '').strip()
+    success, message, wa_url = send_whatsapp_relance(id, custom_phone=phone_input or None)
     if success and wa_url:
-        flash("La relance WhatsApp a été préparée. Redirection vers WhatsApp...", "success")
+        flash("La relance WhatsApp a été préparée. Redirection...", "success")
         return redirect(wa_url)
     else:
-        flash(message, "danger")
+        flash(message, "success" if success else "danger")
         return redirect(url_for('tasks.detail_tache', id=id))
 
 

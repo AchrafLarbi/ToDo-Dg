@@ -4,3 +4,9 @@ __pycache__/
 venv/
 .venv/
 *.db
+node_modules/
+whatsapp-server/node_modules/
+.wwebjs_auth/
+whatsapp-server/.wwebjs_auth/
+.wwebjs_cache/
+

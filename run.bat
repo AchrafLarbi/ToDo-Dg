@@ -24,6 +24,20 @@ if not exist .env (
     exit /b 1
 )
 
+where node >nul 2>nul
+if not errorlevel 1 (
+    if exist whatsapp-server (
+        if not exist whatsapp-server\node_modules (
+            echo Installation des dependances Node.js pour le Gateway WhatsApp...
+            cd whatsapp-server
+            call npm install
+            cd ..
+        )
+        echo Lancement du Gateway WhatsApp automatique...
+        start "WhatsApp Gateway (+213542527408)" cmd /k "cd /d %~dp0\whatsapp-server && node index.js"
+    )
+)
+
 echo Lancement de l'application sur http://127.0.0.1:5000 ...
 start "" http://127.0.0.1:5000
 python app.py

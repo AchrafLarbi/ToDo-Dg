@@ -113,6 +113,8 @@ def init_db():
         cur.execute(SCHEMA)
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_email TEXT")
         cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_type TEXT DEFAULT 'Aucune'")
+        cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_sender_phone TEXT")
+        cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_country_code TEXT DEFAULT '213'")
         cur.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
     conn.commit()
     conn.close()
@@ -136,21 +138,23 @@ def update_settings(data):
             cur.execute(
                 """UPDATE settings SET smtp_host=%s, smtp_port=%s, smtp_user=%s, smtp_password=%s,
                    sender_name=%s, sender_email=%s, reminder_days_before=%s, daily_check_hour=%s,
-                   auto_reminders_enabled=%s, base_url=%s WHERE id=1""",
+                   auto_reminders_enabled=%s, base_url=%s, whatsapp_sender_phone=%s, whatsapp_country_code=%s WHERE id=1""",
                 (data['smtp_host'], data['smtp_port'], data['smtp_user'], data['smtp_password'],
                  data['sender_name'], data.get('sender_email') or None,
                  data['reminder_days_before'], data['daily_check_hour'],
-                 data['auto_reminders_enabled'], data['base_url']),
+                 data['auto_reminders_enabled'], data['base_url'],
+                 data.get('whatsapp_sender_phone') or None, data.get('whatsapp_country_code') or '213'),
             )
         else:
             cur.execute(
                 """UPDATE settings SET smtp_host=%s, smtp_port=%s, smtp_user=%s,
                    sender_name=%s, sender_email=%s, reminder_days_before=%s, daily_check_hour=%s,
-                   auto_reminders_enabled=%s, base_url=%s WHERE id=1""",
+                   auto_reminders_enabled=%s, base_url=%s, whatsapp_sender_phone=%s, whatsapp_country_code=%s WHERE id=1""",
                 (data['smtp_host'], data['smtp_port'], data['smtp_user'],
                  data['sender_name'], data.get('sender_email') or None,
                  data['reminder_days_before'], data['daily_check_hour'],
-                 data['auto_reminders_enabled'], data['base_url']),
+                 data['auto_reminders_enabled'], data['base_url'],
+                 data.get('whatsapp_sender_phone') or None, data.get('whatsapp_country_code') or '213'),
             )
     conn.commit()
     conn.close()

@@ -19,6 +19,8 @@ def parametres():
             'daily_check_hour': int(request.form['daily_check_hour']),
             'auto_reminders_enabled': 1 if request.form.get('auto_reminders_enabled') else 0,
             'base_url': request.form.get('base_url', '').strip().rstrip('/'),
+            'whatsapp_sender_phone': request.form.get('whatsapp_sender_phone', '').strip(),
+            'whatsapp_country_code': request.form.get('whatsapp_country_code', '213').strip(),
         })
         reschedule_scheduler()
         flash('Paramètres enregistrés.', 'success')
@@ -33,4 +35,15 @@ def test_email():
         current_app.logger.exception("Erreur inattendue lors de l'envoi de l'email de test")
         success, message = False, f"Erreur inattendue : {exc}"
     flash(message, 'success' if success else 'danger')
+    return redirect(url_for('settings.parametres'))
+
+@settings_bp.route('/parametres/reset-whatsapp', methods=['POST'])
+def reset_whatsapp():
+    import urllib.request
+    try:
+        req = urllib.request.Request('http://127.0.0.1:3001/reset', data=b'{}', headers={'Content-Type': 'application/json'}, method='POST')
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            flash("Session WhatsApp réinitialisée. Scannez le nouveau QR Code avec votre nouveau numéro expéditeur sur http://127.0.0.1:3001/qr", "success")
+    except Exception as exc:
+        flash(f"Erreur lors de la réinitialisation : {exc}", "danger")
     return redirect(url_for('settings.parametres'))

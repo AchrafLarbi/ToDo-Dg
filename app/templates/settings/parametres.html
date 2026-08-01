@@ -43,8 +43,18 @@
     </div>
 
     <div class="md:col-span-2">
-      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">URL publique de l'application (nécessaire pour les liens dans les emails)</label>
-      <input type="text" name="base_url" value="{{ settings.base_url or '' }}" placeholder="http://127.0.0.1:5000 ou https://votre-app.onrender.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">URL publique de l'application (nécessaire pour les liens dans les emails/WhatsApp)</label>
+      <input type="text" name="base_url" value="{{ settings.base_url or '' }}" placeholder="http://localhost:5000 ou https://votre-app.onrender.com" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Numéro WhatsApp Expéditeur</label>
+      <input type="text" name="whatsapp_sender_phone" value="{{ settings.whatsapp_sender_phone or '' }}" placeholder="ex. +213542527408" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Indicatif Pays par défaut (ex: 213)</label>
+      <input type="text" name="whatsapp_country_code" value="{{ settings.whatsapp_country_code or '213' }}" placeholder="ex. 213" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
     </div>
 
     <div>
@@ -81,6 +91,19 @@
   <form method="post" action="{{ url_for('settings.test_email') }}">
     <button type="submit" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-sm rounded-xl transition-colors">
       Envoyer un email de test
+    </button>
+  </form>
+</div>
+
+<!-- WhatsApp Device Reset card -->
+<div class="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <div>
+    <h3 class="text-base font-bold text-slate-900">Changer le téléphone expéditeur WhatsApp</h3>
+    <p class="text-xs text-slate-500 mt-0.5">Actuellement associé à <strong>{{ settings.whatsapp_sender_phone or 'un appareil connecté' }}</strong>. Pour envoyer depuis un autre numéro, réinitialisez et scannez le QR code avec le nouveau téléphone.</p>
+  </div>
+  <form method="post" action="{{ url_for('settings.reset_whatsapp') }}">
+    <button type="submit" onclick="return confirm('Voulez-vous dissocier l\'ancien téléphone WhatsApp et scanner le QR code avec le nouveau numéro ?');" class="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-semibold text-sm rounded-xl transition-colors">
+      Changer de téléphone Expéditeur
     </button>
   </form>
 </div>
