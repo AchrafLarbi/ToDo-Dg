@@ -41,9 +41,9 @@ def test_email():
 def reset_whatsapp():
     import urllib.request
     try:
-        req = urllib.request.Request('http://127.0.0.1:3001/reset', data=b'{}', headers={'Content-Type': 'application/json'}, method='POST')
+        req = urllib.request.Request('http://127.0.0.1:3005/reset', data=b'{}', headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(req, timeout=5) as resp:
-            flash("Session WhatsApp réinitialisée. Scannez le nouveau QR Code avec votre nouveau numéro expéditeur sur http://127.0.0.1:3001/qr", "success")
+            flash("Session WhatsApp réinitialisée. Scannez le nouveau QR Code avec votre nouveau numéro expéditeur sur /qr", "success")
     except Exception as exc:
         flash(f"Erreur lors de la réinitialisation : {exc}", "danger")
     return redirect(url_for('settings.parametres'))

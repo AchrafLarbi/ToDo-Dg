@@ -7,7 +7,7 @@ from app.models import database
 
 logger = logging.getLogger(__name__)
 
-GATEWAY_URL = "http://127.0.0.1:3001"
+GATEWAY_URL = "http://127.0.0.1:3005"
 
 
 def get_default_country_code():
@@ -61,13 +61,11 @@ def send_whatsapp_auto(clean_phone, msg):
 
 def build_whatsapp_message(task):
     """Construit le texte du message de relance sans icônes."""
-    base_url = "http://localhost:5000"
+    base_url = "http://197.140.9.176"
     try:
         settings = database.get_settings()
         if settings and settings.get('base_url'):
             base_url = settings['base_url'].rstrip('/')
-            if "127.0.0.1" in base_url:
-                base_url = base_url.replace("127.0.0.1", "localhost")
     except Exception:
         pass
 

@@ -93,9 +93,13 @@ def detail_tache(id):
     if not task:
         flash('Tâche introuvable.', 'danger')
         return redirect(url_for('tasks.taches'))
+    settings = database.get_settings()
+    base_url = (settings.get('base_url') or 'http://197.140.9.176').rstrip('/')
+    task_url = f"{base_url}/t/{task['update_token']}" if task.get('update_token') else None
     return render_template(
         'tasks/tache_detail.html',
         task=task,
+        task_url=task_url,
         projets=database.list_projets(),
         collaborateurs=database.list_collaborateurs(),
         reminders=database.list_reminders(id),

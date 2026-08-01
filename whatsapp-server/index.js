@@ -10,7 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3005;
 
 let clientStatus = 'initializing';
 let authenticated = false;
@@ -215,7 +215,7 @@ app.post('/send', async (req, res) => {
 
 client.initialize();
 
-app.listen(PORT, () => {
-    console.log(`WhatsApp Gateway Service listening on http://127.0.0.1:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`WhatsApp Gateway Service listening on http://0.0.0.0:${PORT}`);
     console.log(`QR Web Page available at: http://127.0.0.1:${PORT}/qr`);
 });
