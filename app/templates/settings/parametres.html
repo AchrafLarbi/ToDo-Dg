@@ -24,12 +24,12 @@
 
     <div>
       <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Login SMTP</label>
-      <input type="text" name="smtp_user" value="{{ settings.smtp_user or '' }}" placeholder="ex. 8a1b2c001@smtp-brevo.com" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      <input type="text" name="smtp_user" value="{{ settings.smtp_user or '' }}" placeholder="ex. pda@amimer.com" required class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
     </div>
 
     <div>
       <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Mot de passe / Clé SMTP</label>
-      <input type="password" name="smtp_password" placeholder="{{ '(dejà enregistré, laisser vide pour garder)' if settings.smtp_password else 'Clé SMTP Brevo' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+      <input type="password" name="smtp_password" placeholder="{{ '(déjà enregistré, laisser vide pour garder)' if settings.smtp_password else 'Mot de passe SMTP' }}" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
     </div>
 
     <div>

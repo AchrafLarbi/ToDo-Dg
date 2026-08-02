@@ -81,12 +81,12 @@ CREATE TABLE IF NOT EXISTS task_updates (
 
 CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
-    smtp_host TEXT DEFAULT 'smtp.office365.com',
-    smtp_port INTEGER DEFAULT 587,
-    smtp_user TEXT,
-    smtp_password TEXT,
+    smtp_host TEXT DEFAULT 'mail.amimer.com',
+    smtp_port INTEGER DEFAULT 465,
+    smtp_user TEXT DEFAULT 'pda@amimer.com',
+    smtp_password TEXT DEFAULT 'RZ{M9q*n+jz3grt[',
     sender_name TEXT DEFAULT 'Gestion des taches',
-    sender_email TEXT,
+    sender_email TEXT DEFAULT 'pda@amimer.com',
     reminder_days_before INTEGER DEFAULT 2,
     daily_check_hour INTEGER DEFAULT 8,
     auto_reminders_enabled INTEGER DEFAULT 1,
@@ -115,7 +115,7 @@ def init_db():
         cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_type TEXT DEFAULT 'Aucune'")
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_sender_phone TEXT")
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_country_code TEXT DEFAULT '213'")
-        cur.execute("INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING")
+        cur.execute("INSERT INTO settings (id, smtp_host, smtp_port, smtp_user, smtp_password, sender_email) VALUES (1, 'mail.amimer.com', 465, 'pda@amimer.com', 'RZ{M9q*n+jz3grt[', 'pda@amimer.com') ON CONFLICT (id) DO NOTHING")
     conn.commit()
     conn.close()
 
