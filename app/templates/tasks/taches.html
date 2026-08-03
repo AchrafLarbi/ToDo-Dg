@@ -209,6 +209,11 @@
             </td>
             <td class="px-4 py-3 text-right whitespace-nowrap">
               <div class="inline-flex items-center gap-1.5 justify-end">
+                {% if t.recurrence_type and t.recurrence_type != 'Aucune' %}
+                  <button type="submit" form="stop-rec-form-{{ t.id }}" class="px-2.5 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-semibold text-xs rounded-lg transition-colors inline-flex items-center gap-1 cursor-pointer" title="Arrêter la récurrence ({{ t.recurrence_type }})">
+                    🛑 Stop récurrence
+                  </button>
+                {% endif %}
                 <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium text-xs rounded-lg transition-colors">
                   Voir
                 </a>
@@ -226,10 +231,14 @@
   </div>
 </form>
 
-<!-- Separate Direct Delete Forms to prevent nested forms -->
+<!-- Separate Direct Action Forms to prevent nested forms -->
 {% for t in tasks %}
 <form id="direct-delete-form-{{ t.id }}" method="post" action="{{ url_for('tasks.supprimer_tache', id=t.id) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer directement la tâche « {{ t.title|escape }} » ?');">
 </form>
+{% if t.recurrence_type and t.recurrence_type != 'Aucune' %}
+<form id="stop-rec-form-{{ t.id }}" method="post" action="{{ url_for('tasks.arreter_recurrence', id=t.id) }}" onsubmit="return confirm('Arrêter définitivement la récurrence de la tâche « {{ t.title|escape }} » ?');">
+</form>
+{% endif %}
 {% endfor %}
 
 

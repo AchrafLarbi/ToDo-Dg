@@ -159,6 +159,13 @@ def relancer_whatsapp(id):
         return redirect(url_for('tasks.detail_tache', id=id))
 
 
+@tasks_bp.route('/taches/<int:id>/arreter-recurrence', methods=['POST'])
+def arreter_recurrence(id):
+    database.stop_task_recurrence(id)
+    flash('La récurrence a été arrêtée pour cette tâche.', 'success')
+    return redirect(request.referrer or url_for('tasks.detail_tache', id=id))
+
+
 @tasks_bp.route('/taches/<int:id>/supprimer', methods=['POST'])
 @tasks_bp.route('/taches/<int:id>/supprimer_direct', methods=['POST'])
 def supprimer_tache(id):

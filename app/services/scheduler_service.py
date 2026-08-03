@@ -25,6 +25,9 @@ def run_verification_echeances():
     # Auto-process recurring tasks that reached due date
     all_tasks = database.list_taches()
     for task in all_tasks:
+        rec_type = task.get('recurrence_type')
+        status = task.get('status')
+        due = task.get('due_date')
         if rec_type and rec_type != 'Aucune' and status not in ('Terminee', 'Cloturee', 'Terminé') and due and due <= today_str:
             next_due = database.calculate_next_due_date(due, rec_type)
             database.update_tache(

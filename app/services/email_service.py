@@ -196,7 +196,7 @@ def _task_link(task):
     return f"{settings['base_url']}/t/{task['update_token']}"
 
 
-def send_test_email():
+def send_test_email(recipient=None):
     try:
         settings = database.get_settings()
     except Exception as exc:
@@ -204,18 +204,18 @@ def send_test_email():
         return False, f"Erreur de base de données : {exc}"
     if not settings or not settings['smtp_user']:
         return False, "Aucune adresse email configurée. Renseignez vos paramètres SMTP."
-    destinataire = settings.get('sender_email') or settings['smtp_user']
+    destinataire = (recipient or '').strip() or settings.get('sender_email') or settings['smtp_user']
     
     body = (
         "Bonjour,\n\n"
         "Ceci est un email de test envoyé depuis l'application Gestion des tâches.\n"
         "Si vous recevez ce message, la configuration SMTP fonctionne correctement."
     )
-    html_body = """
+    html_body = f"""
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff;">
       <h2 style="color: #4f46e5; margin-top: 0;">Test d'envoi d'email</h2>
       <p style="color: #334155; font-size: 14px; line-height: 1.5;">
-        Ceci est un email de test envoyé depuis l'application <strong>Gestion des tâches</strong>.
+        Ceci est un email de test envoyé à <strong>{destinataire}</strong> depuis l'application <strong>Gestion des tâches</strong>.
       </p>
       <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 12px; margin: 16px 0; font-size: 13px; color: #15803d;">
         ✓ La configuration SMTP est fonctionnelle et prête à envoyer des notifications.

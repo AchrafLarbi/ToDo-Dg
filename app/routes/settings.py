@@ -29,8 +29,9 @@ def parametres():
 
 @settings_bp.route('/parametres/test-email', methods=['POST'])
 def test_email():
+    recipient = request.form.get('test_recipient', '').strip()
     try:
-        success, message = send_test_email()
+        success, message = send_test_email(recipient=recipient)
     except Exception as exc:
         current_app.logger.exception("Erreur inattendue lors de l'envoi de l'email de test")
         success, message = False, f"Erreur inattendue : {exc}"

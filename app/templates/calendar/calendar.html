@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<!-- FullCalendar 6 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Calendrier des Tâches</h1>
+    <p class="text-slate-500 text-sm mt-1">Glissez-déposez une tâche pour modifier son échéance. Le collaborateur sera automatiquement notifié.</p>
+  </div>
+  
+  <div class="flex flex-wrap items-center gap-3">
+    <!-- Hide Closed Tasks Toggle Switch -->
+    <label class="inline-flex items-center gap-2 cursor-pointer bg-white px-3.5 py-1.5 rounded-xl border border-slate-200 shadow-xs hover:bg-slate-50 transition-colors">
+      <input type="checkbox" id="toggle-hide-closed" onchange="refetchCalendarEvents()" class="sr-only peer">
+      <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600 relative"></div>
+      <span class="text-xs font-bold text-slate-700 select-none">Masquer les tâches clôturées</span>
+    </label>
+
+    <div class="hidden sm:flex items-center gap-2">
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+        <span class="w-2 h-2 rounded-full bg-rose-500"></span> Urgente
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+        <span class="w-2 h-2 rounded-full bg-amber-500"></span> Haute
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
+        <span class="w-2 h-2 rounded-full bg-indigo-500"></span> En cours
+      </span>
+      <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Clôturée
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Notification Toast Bar -->
+<div id="calendar-toast" class="hidden fixed bottom-6 right-6 z-50 px-4 py-3 bg-slate-900 text-white rounded-2xl shadow-2xl border border-slate-700 text-xs font-semibold flex items-center gap-2">
+  <span id="toast-icon">✓</span>
+  <span id="toast-message">Notification</span>
+</div>
+
+<!-- Calendar Container Card -->
+<div class="bg-white rounded-2xl p-4 sm:p-6 border border-slate-200/80 shadow-sm mb-8">
+  <div id="calendar" class="min-h-[600px]"></div>
+</div>
+
+<script>
+  var calendar;
+
+  function showToast(message, isError) {
+    var toast = document.getElementById('calendar-toast');
+    var toastMsg = document.getElementById('toast-message');
+    var toastIcon = document.getElementById('toast-icon');
+
+    toastMsg.textContent = message;
+    toastIcon.textContent = isError ? '✕' : '✓';
+    toast.className = 'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all ' +
+      (isError ? 'bg-rose-900 text-rose-100 border border-rose-700' : 'bg-slate-900 text-emerald-400 border border-slate-700');
+
+    toast.classList.remove('hidden');
+    setTimeout(function() {
+      toast.classList.add('hidden');
+    }, 4000);
+  }
+
+  function getEventsUrl() {
+    var hideClosed = document.getElementById('toggle-hide-closed').checked;
+    return '/api/calendar/events?hide_closed=' + (hideClosed ? '1' : '0');
+  }
+
+  function refetchCalendarEvents() {
+    if (calendar) {
+      calendar.getEventSources().forEach(function(source) {
+        source.remove();
+      });
+      calendar.addEventSource(getEventsUrl());
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      locale: 'fr',
+      editable: true,
+      droppable: true,
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,listMonth'
+      },
+      buttonText: {
+        today: "Aujourd'hui",
+        month: "Mois",
+        week: "Semaine",
+        list: "Liste"
+      },
+      events: getEventsUrl(),
+      eventTimeFormat: {
+        hour: '2-digit',
+        minute: '2-digit',
+        meridiem: false
+      },
+      eventClick: function(info) {
+        if (info.event.url) {
+          window.location.href = info.event.url;
+          info.jsEvent.preventDefault();
+        }
+      },
+      eventDrop: function(info) {
+        var taskId = info.event.id;
+        var newDate = info.event.startStr.split('T')[0];
+
+        fetch('/api/calendar/update-due-date', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            task_id: taskId,
+            due_date: newDate
+          })
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+          if (data.success) {
+            showToast(data.message, false);
+          } else {
+            showToast(data.message || 'Erreur lors de la mise à jour', true);
+            info.revert();
+          }
+        })
+        .catch(function(err) {
+          showToast('Erreur réseau lors de la mise à jour', true);
+          info.revert();
+        });
+      },
+      eventDidMount: function(info) {
+        var props = info.event.extendedProps;
+        var tooltip = props.title + '\nProjet: ' + props.project + '\nCollaborateur: ' + props.collaborator + '\nStatut: ' + props.status + '\n\n💡 Glissez pour modifier la date d\'échéance';
+        info.el.setAttribute('title', tooltip);
+      }
+    });
+    calendar.render();
+  });
+</script>
+
+<style>
+  /* Custom tweaks for FullCalendar integration with Tailwind */
+  .fc .fc-toolbar-title {
+    font-size: 1.125rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+  .fc .fc-button-primary {
+    background-color: #4f46e5 !important;
+    border-color: #4338ca !important;
+    border-radius: 0.75rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    padding: 0.4rem 0.8rem !important;
+    box-shadow: none !important;
+  }
+  .fc .fc-button-primary:hover {
+    background-color: #4338ca !important;
+  }
+  .fc .fc-button-active {
+    background-color: #3730a3 !important;
+  }
+  .fc .fc-daygrid-day-number {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    padding: 6px 8px !important;
+  }
+  .fc .fc-event {
+    border-radius: 0.5rem !important;
+    padding: 2px 5px !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    cursor: grab !important;
+    transition: transform 0.15s ease;
+  }
+  .fc .fc-event:active {
+    cursor: grabbing !important;
+  }
+  .fc .fc-event:hover {
+    transform: scale(1.02);
+  }
+</style>
+
+{% endblock %}

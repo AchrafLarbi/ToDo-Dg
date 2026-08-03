@@ -40,3 +40,45 @@ def verifier_echeances():
             msg += f", {sent_ko} échec(s)"
         flash(msg + ".", "success" if sent_ko == 0 else "warning")
     return redirect(url_for('dashboard.dashboard'))
+
+@dashboard_bp.route('/relancer-selection', methods=['POST'])
+def relancer_selection():
+    task_ids = request.form.getlist('task_ids')
+    channel = request.form.get('channel', 'email')
+    
+    if not task_ids:
+        flash("Aucune tâche sélectionnée pour la relance.", "warning")
+        return redirect(url_for('dashboard.dashboard'))
+        
+    sent_email_ok = 0
+    sent_email_ko = 0
+    wa_links = []
+    
+    from app.services.email_service import send_reminder
+    from app.services import send_whatsapp_relance
+    
+    for tid in task_ids:
+        try:
+            tid_int = int(tid)
+            if channel in ('email', 'all'):
+                ok, msg = send_reminder(tid_int, 'echeance_proche')
+                if ok:
+                    sent_email_ok += 1
+                else:
+                    sent_email_ko += 1
+            if channel in ('whatsapp', 'all'):
+                ok_wa, msg_wa, wa_url = send_whatsapp_relance(tid_int)
+                if ok_wa and wa_url:
+                    wa_links.append(wa_url)
+        except Exception:
+            sent_email_ko += 1
+
+    if channel == 'whatsapp' and wa_links:
+        flash(f"Préparation de {len(wa_links)} relance(s) WhatsApp...", "success")
+        return redirect(wa_links[0])
+        
+    msg = f"Relances effectuées : {sent_email_ok} email(s) envoyé(s) avec succès"
+    if sent_email_ko > 0:
+        msg += f", {sent_email_ko} échec(s)"
+    flash(msg + ".", "success" if sent_email_ko == 0 else "warning")
+    return redirect(url_for('dashboard.dashboard'))

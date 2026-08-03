@@ -12,6 +12,7 @@ from app.routes import (
     tasks_bp,
     collaborators_bp,
     settings_bp,
+    calendar_bp,
 )
 
 
@@ -36,5 +37,14 @@ def create_app(config_class=Config):
     app.register_blueprint(tasks_bp)
     app.register_blueprint(collaborators_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(calendar_bp)
+
+    @app.after_request
+    def add_header(response):
+        if 'Cache-Control' not in response.headers:
+            response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
+        return response
 
     return app

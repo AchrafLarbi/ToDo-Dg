@@ -375,6 +375,14 @@ def update_tache(task_id, title, description, project_id, collaborator_id, prior
     conn.close()
 
 
+def update_tache_due_date(task_id, due_date):
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE tasks SET due_date=%s WHERE id=%s", (due_date or None, task_id))
+    conn.commit()
+    conn.close()
+
+
 def update_statut(task_id, status, closure_comment, closed_at):
     conn = get_db()
     with conn.cursor() as cur:
@@ -449,6 +457,14 @@ def calculate_next_due_date(base_date_str, recurrence_type):
         return base_date_str
 
     return next_date.isoformat()
+
+
+def stop_task_recurrence(task_id):
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("UPDATE tasks SET recurrence_type = 'Aucune' WHERE id = %s", (task_id,))
+    conn.commit()
+    conn.close()
 
 
 def process_task_recurrence(task_id):

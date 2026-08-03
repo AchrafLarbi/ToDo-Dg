@@ -8,17 +8,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='logo.png') }}">
 </head>
 <body class="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 min-h-screen font-['Plus_Jakarta_Sans',sans-serif] flex items-center justify-center p-4">
 
 <div class="w-full max-w-md bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 shadow-2xl shadow-indigo-950/50">
   <div class="text-center mb-8">
-    <div class="w-14 h-14 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-2xl mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-4">
-      <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"></path>
-        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-      </svg>
-    </div>
+    <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="w-16 h-16 rounded-2xl mx-auto mb-4 object-cover shadow-xl shadow-indigo-500/20 border border-slate-700/80">
     <h1 class="text-2xl font-extrabold text-white tracking-tight">Gestion des Tâches</h1>
     <p class="text-slate-400 text-sm mt-1">Connectez-vous à l'espace administration</p>
   </div>

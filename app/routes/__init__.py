@@ -5,6 +5,7 @@ from .projects import projects_bp
 from .tasks import tasks_bp
 from .collaborators import collaborators_bp
 from .settings import settings_bp
+from .calendar import calendar_bp
 
 __all__ = [
     'auth_bp',
@@ -13,4 +14,5 @@ __all__ = [
     'tasks_bp',
     'collaborators_bp',
     'settings_bp',
+    'calendar_bp',
 ]

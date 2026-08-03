@@ -6,12 +6,12 @@
     <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Tableau de bord</h1>
     <p class="text-slate-500 text-sm mt-1">Vue d'ensemble de l'activité, de la répartition et des urgences</p>
   </div>
-  <form method="post" action="{{ url_for('dashboard.verifier_echeances') }}">
-    <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all">
+  <div>
+    <button type="button" onclick="openRelanceModal()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm rounded-xl shadow-md shadow-indigo-600/20 transition-all cursor-pointer">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
       Vérifier les échéances et relancer
     </button>
-  </form>
+  </div>
 </div>
 
 <!-- Stat Cards -->
@@ -201,5 +201,109 @@
   </div>
   {% endif %}
 </div>
+
+<!-- Interactive Relance Modal -->
+<div id="relance-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <!-- Modal Header -->
+    <div class="p-6 bg-slate-900 text-white flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-bold">Vérification des Échéances & Relances</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Sélectionnez les tâches à relancer et choisissez le canal d'envoi (WhatsApp / Email).</p>
+      </div>
+      <button type="button" onclick="closeRelanceModal()" class="text-slate-400 hover:text-white text-xl font-bold p-1">✕</button>
+    </div>
+
+    <!-- Form & Task Selection List -->
+    <form id="relance-modal-form" method="post" action="{{ url_for('dashboard.relancer_selection') }}" class="flex-1 flex flex-col overflow-hidden">
+      <input type="hidden" name="channel" id="relance-channel-input" value="email">
+
+      <div class="p-6 overflow-y-auto space-y-4 flex-1">
+        {% set all_relance_tasks = overdue + due_soon %}
+        {% if all_relance_tasks %}
+          <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider">{{ all_relance_tasks|length }} tâche(s) nécessitant une relance</span>
+            <label class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 cursor-pointer">
+              <input type="checkbox" id="relance-select-all" checked onchange="toggleAllRelanceTasks(this.checked)" class="rounded text-indigo-600 focus:ring-indigo-500">
+              <span>Tout sélectionner</span>
+            </label>
+          </div>
+
+          <div class="space-y-3">
+            {% for t in all_relance_tasks %}
+              <label class="flex items-start gap-3.5 p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all cursor-pointer">
+                <input type="checkbox" name="task_ids" value="{{ t.id }}" checked class="relance-task-cb mt-1 rounded text-indigo-600 focus:ring-indigo-500">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <h4 class="text-sm font-bold text-slate-900 truncate">{{ t.title }}</h4>
+                    {% if t.due_date and t.due_date < today %}
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">En retard</span>
+                    {% else %}
+                      <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200">Échéance proche</span>
+                    {% endif %}
+                  </div>
+                  <p class="text-xs text-slate-600 mt-1">
+                    Collaborateur : <strong>{{ t.collaborator_name or 'Non assigné' }}</strong>
+                    {% if t.collaborator_phone %} • 📱 {{ t.collaborator_phone }}{% endif %}
+                    {% if t.collaborator_email %} • ✉️ {{ t.collaborator_email }}{% endif %}
+                  </p>
+                  <p class="text-xs text-slate-400 mt-0.5">Échéance : <span class="font-semibold text-slate-600">{{ t.due_date or 'Non définie' }}</span> • Projet : {{ t.project_name or 'Sans projet' }}</p>
+                </div>
+              </label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="p-8 text-center text-slate-500 text-sm">
+            🎉 Aucune tâche en retard ni à échéance proche aujourd'hui. Toutes les activités sont à jour !
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Modal Action Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <button type="button" onclick="closeRelanceModal()" class="w-full sm:w-auto px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs rounded-xl transition-colors">
+          Fermer
+        </button>
+        
+        {% if all_relance_tasks %}
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+          <button type="button" onclick="submitRelanceForm('whatsapp')" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+            💬 WhatsApp
+          </button>
+          <button type="button" onclick="submitRelanceForm('email')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+            ✉️ Email
+          </button>
+          <button type="button" onclick="submitRelanceForm('all')" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-sm transition-colors flex items-center gap-1.5 cursor-pointer">
+            🚀 Tout relancer (WhatsApp + Email)
+          </button>
+        </div>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openRelanceModal() {
+    document.getElementById('relance-modal').classList.remove('hidden');
+  }
+  function closeRelanceModal() {
+    document.getElementById('relance-modal').classList.add('hidden');
+  }
+  function toggleAllRelanceTasks(checked) {
+    document.querySelectorAll('.relance-task-cb').forEach(function(cb) {
+      cb.checked = checked;
+    });
+  }
+  function submitRelanceForm(channel) {
+    var checked = document.querySelectorAll('.relance-task-cb:checked');
+    if (checked.length === 0) {
+      alert('Veuillez sélectionner au moins une tâche à relancer.');
+      return;
+    }
+    document.getElementById('relance-channel-input').value = channel;
+    document.getElementById('relance-modal-form').submit();
+  }
+</script>
 
 {% endblock %}
