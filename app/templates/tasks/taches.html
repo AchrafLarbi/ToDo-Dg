@@ -1,9 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="mb-8">
-  <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Tâches</h1>
-  <p class="text-slate-500 text-sm mt-1">Gérez, créez et filtrez toutes les tâches de l'organisation</p>
+<div class="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">{{ status_label or 'Tâches' }}</h1>
+    <p class="text-slate-500 text-sm mt-1">Gérez, créez et filtrez toutes les tâches de l'organisation ({{ tasks|length }} affichée(s))</p>
+  </div>
+  {% if filters.status or filters.project_id or filters.collaborator_id or filters.priority %}
+  <a href="{{ url_for('tasks.taches') }}" class="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-colors shrink-0">
+    ✕ Réinitialiser les filtres
+  </a>
+  {% endif %}
 </div>
 
 <!-- Creation Form Card (Collapsible) -->
@@ -18,7 +25,7 @@
     </button>
   </div>
   
-  <div id="create-task-form-body" class="p-5">
+  <div id="create-task-form-body" class="p-5 {{ 'hidden' if filters.status or filters.project_id or filters.collaborator_id or filters.priority else '' }}">
     <form method="post" action="{{ url_for('tasks.ajouter_tache') }}" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 
     <div class="md:col-span-2 lg:col-span-3">
@@ -111,9 +118,17 @@
 
   <select name="status" onchange="this.form.submit()" class="w-full lg:w-auto px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
     <option value="">Tous les statuts</option>
-    {% for s in STATUSES %}
-      <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s }}</option>
-    {% endfor %}
+    <optgroup label="Vue Rapide">
+      <option value="active" {{ 'selected' if filters.status == 'active' }}>Tâches actives (Non terminées)</option>
+      <option value="overdue" {{ 'selected' if filters.status == 'overdue' }}>En retard</option>
+      <option value="pending" {{ 'selected' if filters.status == 'pending' }}>En attente / À venir</option>
+      <option value="closed" {{ 'selected' if filters.status == 'closed' }}>Terminées / Clôturées</option>
+    </optgroup>
+    <optgroup label="Statut Précis">
+      {% for s in STATUSES %}
+        <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s }}</option>
+      {% endfor %}
+    </optgroup>
   </select>
 
   <select name="priority" onchange="this.form.submit()" class="w-full lg:w-auto px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -143,7 +158,56 @@
     </button>
   </div>
 
-  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
+  <!-- Mobile Native Task Cards View (< md screens) -->
+  <div class="space-y-3.5 md:hidden mb-8">
+    {% for t in tasks %}
+      <div class="searchable-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all relative {{ 'border-l-4 border-l-rose-500 bg-rose-50/30' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+        <div class="flex items-start gap-3">
+          <input type="checkbox" name="task_ids" value="{{ t.id }}" class="task-checkbox mt-1 w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="text-sm font-bold text-slate-900 hover:text-indigo-600 transition-colors leading-tight line-clamp-2">
+                {{ t.title }}
+              </a>
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 {{ 'bg-emerald-50 text-emerald-700 border border-emerald-200' if t.status in ['Terminee','Terminée','Cloturee'] else ('bg-indigo-50 text-indigo-700 border border-indigo-200' if t.status == 'En cours' else 'bg-slate-100 text-slate-700 border border-slate-200') }}">
+                {{ t.status }}
+              </span>
+            </div>
+
+            <!-- Task Metadata Grid -->
+            <div class="grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-500 mb-3">
+              <div><span class="text-slate-400">Collaborateur :</span> <strong class="text-slate-700 font-semibold">{{ t.collaborator_name or 'Non assigné' }}</strong></div>
+              <div><span class="text-slate-400">Projet :</span> <span class="text-slate-700 font-medium">{{ t.project_name or '-' }}</span></div>
+              <div><span class="text-slate-400">Échéance :</span> <span class="{{ 'font-bold text-rose-600' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else 'text-slate-700' }}">{{ t.due_date or '-' }}</span> {{ deadline_badge(t) }}</div>
+              <div><span class="text-slate-400">Priorité :</span> <span class="font-semibold {{ 'text-rose-600' if t.priority == 'Urgente' else ('text-amber-600' if t.priority == 'Haute' else 'text-slate-600') }}">{{ t.priority }}</span></div>
+            </div>
+
+            <!-- Mobile Action Buttons Footer -->
+            <div class="flex items-center gap-2 pt-2 border-t border-slate-100 justify-end">
+              {% if t.recurrence_type and t.recurrence_type != 'Aucune' %}
+                <button type="submit" form="stop-rec-form-{{ t.id }}" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 font-semibold text-xs rounded-xl transition-colors inline-flex items-center gap-1 cursor-pointer">
+                  🛑 Stop récurrence
+                </button>
+              {% endif %}
+              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-xs rounded-xl transition-colors">
+                Voir détails
+              </a>
+              <button type="submit" form="direct-delete-form-{{ t.id }}" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-medium text-xs rounded-xl transition-colors cursor-pointer">
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center text-slate-500 text-sm">
+        Aucune tâche ne correspond aux critères de recherche.
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Desktop Table View (>= md screens) -->
+  <div class="hidden md:block bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden mb-8">
     <div class="overflow-x-auto">
       <table class="w-full text-left text-sm text-slate-600" id="tasks-table">
         <thead class="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">

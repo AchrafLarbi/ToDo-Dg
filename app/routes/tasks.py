@@ -47,6 +47,15 @@ def taches():
         'status': request.args.get('status', ''),
         'priority': request.args.get('priority', ''),
     }
+    status_val = filters['status']
+    status_label_map = {
+        'active': 'Tâches actives',
+        'overdue': 'Tâches en retard',
+        'closed': 'Tâches terminées / clôturées',
+        'pending': 'Tâches en attente / à venir',
+    }
+    status_label = status_label_map.get(status_val, f"Tâches (Statut : {status_val})" if status_val else "Tâches")
+
     tasks_list = database.list_taches(
         project_id=int(filters['project_id']) if filters['project_id'] else None,
         collaborator_id=int(filters['collaborator_id']) if filters['collaborator_id'] else None,
@@ -59,6 +68,7 @@ def taches():
         projets=database.list_projets(),
         collaborateurs=database.list_collaborateurs(),
         filters=filters,
+        status_label=status_label,
         PRIORITIES=PRIORITIES,
         SENSITIVITIES=SENSITIVITIES,
         STATUSES=STATUSES,

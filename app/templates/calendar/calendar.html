@@ -81,15 +81,17 @@
 
   document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
+    var isMobile = window.innerWidth < 768;
+
     calendar = new FullCalendar.Calendar(calendarEl, {
-      initialView: 'dayGridMonth',
+      initialView: isMobile ? 'listMonth' : 'dayGridMonth',
       locale: 'fr',
       editable: true,
       droppable: true,
       headerToolbar: {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listMonth'
+        right: isMobile ? 'listMonth,dayGridMonth' : 'dayGridMonth,timeGridWeek,listMonth'
       },
       buttonText: {
         today: "Aujourd'hui",
@@ -153,6 +155,17 @@
     font-size: 1.125rem !important;
     font-weight: 800 !important;
     color: #0f172a !important;
+  }
+  @media (max-width: 640px) {
+    .fc .fc-toolbar {
+      flex-direction: column !important;
+      gap: 0.5rem !important;
+      align-items: stretch !important;
+    }
+    .fc .fc-toolbar-chunk {
+      display: flex !important;
+      justify-content: center !important;
+    }
   }
   .fc .fc-button-primary {
     background-color: #4f46e5 !important;

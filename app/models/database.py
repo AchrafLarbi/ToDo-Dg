@@ -280,6 +280,8 @@ TASK_SELECT = """
 
 
 def list_taches(project_id=None, collaborator_id=None, status=None, priority=None):
+    import datetime as _dt
+    today_str = _dt.date.today().isoformat()
     query = TASK_SELECT + " WHERE 1=1"
     params = []
     if project_id:
@@ -289,8 +291,19 @@ def list_taches(project_id=None, collaborator_id=None, status=None, priority=Non
         query += " AND tasks.collaborator_id = %s"
         params.append(collaborator_id)
     if status:
-        query += " AND tasks.status = %s"
-        params.append(status)
+        if status == 'active':
+            query += " AND tasks.status NOT IN ('Terminee', 'Cloturee', 'Terminé')"
+        elif status == 'overdue':
+            query += " AND tasks.status NOT IN ('Terminee', 'Cloturee', 'Terminé') AND tasks.due_date IS NOT NULL AND tasks.due_date < %s"
+            params.append(today_str)
+        elif status == 'closed':
+            query += " AND tasks.status IN ('Terminee', 'Cloturee', 'Terminé')"
+        elif status == 'pending':
+            query += " AND tasks.status NOT IN ('Terminee', 'Cloturee', 'Terminé') AND (tasks.due_date IS NULL OR tasks.due_date >= %s)"
+            params.append(today_str)
+        else:
+            query += " AND tasks.status = %s"
+            params.append(status)
     if priority:
         query += " AND tasks.priority = %s"
         params.append(priority)
@@ -560,24 +573,30 @@ def list_task_updates(task_id):
 def dashboard_stats(today, due_soon_limit):
     conn = get_db()
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) AS n FROM tasks WHERE status NOT IN ('Terminee', 'Cloturee')")
+        cur.execute("SELECT COUNT(*) AS n FROM tasks WHERE status NOT IN ('Terminee', 'Cloturee', 'Terminé')")
         actives = cur.fetchone()['n']
         cur.execute(
             "SELECT COUNT(*) AS n FROM tasks WHERE due_date IS NOT NULL AND due_date < %s "
-            "AND status NOT IN ('Terminee', 'Cloturee')",
+            "AND status NOT IN ('Terminee', 'Cloturee', 'Terminé')",
             (today,),
         )
         overdue = cur.fetchone()['n']
         cur.execute(
             "SELECT COUNT(*) AS n FROM tasks WHERE due_date IS NOT NULL AND due_date >= %s AND due_date <= %s "
-            "AND status NOT IN ('Terminee', 'Cloturee')",
+            "AND status NOT IN ('Terminee', 'Cloturee', 'Terminé')",
             (today, due_soon_limit),
         )
         due_soon = cur.fetchone()['n']
-        cur.execute("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('Terminee', 'Cloturee')")
+        cur.execute(
+            "SELECT COUNT(*) AS n FROM tasks WHERE (due_date IS NULL OR due_date >= %s) "
+            "AND status NOT IN ('Terminee', 'Cloturee', 'Terminé')",
+            (today,),
+        )
+        pending = cur.fetchone()['n']
+        cur.execute("SELECT COUNT(*) AS n FROM tasks WHERE status IN ('Terminee', 'Cloturee', 'Terminé')")
         closed = cur.fetchone()['n']
     conn.close()
-    return {'actives': actives, 'overdue': overdue, 'due_soon': due_soon, 'closed': closed}
+    return {'actives': actives, 'overdue': overdue, 'due_soon': due_soon, 'pending': pending, 'closed': closed}
 
 
 def stats_by_collaborateur(today, due_soon_limit):
