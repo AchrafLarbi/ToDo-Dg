@@ -22,11 +22,21 @@
   </form>
 </div>
 
+<!-- Real-Time Live Search Bar -->
+<div class="mb-6">
+  <div class="relative">
+    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+    </div>
+    <input type="text" id="collabSearchInput" onkeyup="filterCollaboratorsList()" placeholder="Recherche rapide d'un collaborateur par nom ou email..." class="w-full pl-10 pr-4 py-3 bg-white border border-slate-200/80 rounded-2xl text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+  </div>
+</div>
+
 <!-- Collaborators Native Mobile View (< md) -->
 {% if collaborateurs %}
 <div class="space-y-3.5 md:hidden mb-8">
   {% for c in collaborateurs %}
-    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+    <div class="collab-item-card bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
       <div class="flex items-center gap-3 mb-3">
         <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 font-extrabold text-sm flex items-center justify-center shrink-0">
           {{ c.name[0] }}
@@ -83,7 +93,7 @@
       </thead>
       <tbody class="divide-y divide-slate-100">
       {% for c in collaborateurs %}
-        <tr class="hover:bg-slate-50/80 transition-colors">
+        <tr class="collab-item-row hover:bg-slate-50/80 transition-colors">
           <td class="px-6 py-4 font-semibold text-slate-900">
             <a href="{{ url_for('collaborators.detail_collaborateur', id=c.id) }}" class="hover:text-indigo-600 transition-colors">{{ c.name }}</a>
           </td>
@@ -160,6 +170,24 @@
 </div>
 
 <script>
+  function filterCollaboratorsList() {
+    const query = (document.getElementById('collabSearchInput').value || '').toLowerCase().trim();
+    
+    // Filter mobile cards
+    const cards = document.querySelectorAll('.collab-item-card');
+    cards.forEach(card => {
+      const text = card.textContent.toLowerCase();
+      card.style.display = text.includes(query) ? '' : 'none';
+    });
+
+    // Filter desktop rows
+    const rows = document.querySelectorAll('.collab-item-row');
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(query) ? '' : 'none';
+    });
+  }
+
   function openEditModal(btn) {
     const id = btn.getAttribute('data-id');
     const name = btn.getAttribute('data-name');
@@ -172,6 +200,7 @@
     document.getElementById('edit_phone').value = phone || '';
     document.getElementById('editCollabModal').classList.remove('hidden');
   }
+
   function closeEditModal() {
     document.getElementById('editCollabModal').classList.add('hidden');
   }

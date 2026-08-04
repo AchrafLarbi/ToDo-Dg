@@ -67,102 +67,55 @@
       </div>
     </div>
     <div class="flex items-baseline justify-between">
-      <div class="text-3xl font-extrabold text-emerald-600">{{ stats.closed }}</div>
-      <span class="text-xs font-semibold text-emerald-600 group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">Voir <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></span>
     </div>
   </a>
 </div>
 
 <!-- Section: Mises à jour de statuts de tâches à valider -->
 {% if pending_validation %}
-<div class="mb-10 p-5 bg-white border border-amber-300 rounded-3xl shadow-sm relative overflow-hidden">
-  <div class="flex items-center justify-between gap-3 mb-4">
+<div class="mb-10 p-4 sm:p-5 bg-white border border-amber-300 rounded-3xl shadow-sm relative overflow-hidden">
+  <div class="flex items-center justify-between gap-3 mb-3">
     <div>
-      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Mises à jour de statuts de tâches à valider</h2>
-      <p class="text-xs text-slate-500 font-medium">{{ pending_validation|length }} tâche(s) soumise(s) par les collaborateurs en attente de votre décision.</p>
+      <h2 class="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">Mises à jour de statuts de tâches à valider</h2>
+      <p class="text-xs text-slate-500 font-medium">{{ pending_validation|length }} tâche(s) en attente de votre décision.</p>
     </div>
   </div>
 
-  <!-- Mobile Native View (< md screens) -->
-  <div class="space-y-4 md:hidden">
+  <!-- Single-Line List for Mobile and Desktop -->
+  <div class="space-y-2.5">
     {% for t in pending_validation %}
-      <div class="bg-white p-4 rounded-2xl border border-amber-200 shadow-xs">
-        <div class="flex items-start justify-between gap-2 mb-2">
-          <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors leading-tight">
+      <div class="bg-slate-50/90 p-2.5 sm:p-3 rounded-2xl border border-amber-200 shadow-xs flex flex-wrap sm:flex-nowrap items-center justify-between gap-3">
+        <!-- Collaborateur & Titre Tâche -->
+        <div class="shrink-0 text-xs flex items-center gap-1.5 max-w-full sm:max-w-[320px]">
+          <span class="font-extrabold text-slate-900 truncate">{{ t.collaborator_name or 'Non assigné' }}</span>
+          <span class="text-slate-400">&bull;</span>
+          <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="font-bold text-indigo-700 hover:underline truncate inline-block max-w-[150px] sm:max-w-[180px] align-bottom">
             {{ t.title }}
           </a>
-          <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
-            Demande de clôture
-          </span>
         </div>
 
-        <div class="text-xs text-slate-600 space-y-1 mb-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-          <div>Collaborateur : <strong class="text-slate-900">{{ t.collaborator_name or 'Non assigné' }}</strong></div>
-          <div>Projet : <span class="text-slate-700">{{ t.project_name or '-' }}</span></div>
-          <div>Échéance : <span class="font-semibold text-slate-800">{{ t.due_date or '-' }}</span></div>
+        <!-- Zone Motif du Refus (Expanded to fill ALL middle space) -->
+        <div class="flex-1 min-w-[180px]">
+          <input type="text" id="motif_{{ t.id }}" placeholder="Saisir le motif du refus..." class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 shadow-2xs transition-all">
         </div>
 
-        <!-- Mobile Touch Action Forms -->
-        <div class="space-y-3 pt-2 border-t border-slate-100">
+        <!-- Boutons d'action : Refus Croix (Red Cross) et Validation Cocher (Green Tick) -->
+        <div class="flex items-center gap-1.5 shrink-0">
+          <!-- Refus Croix -->
+          <form method="post" action="{{ url_for('tasks.refuser_tache', id=t.id) }}" onsubmit="this.querySelector('input[name=rejection_comment]').value = document.getElementById('motif_{{ t.id }}').value;">
+            <input type="hidden" name="rejection_comment" value="">
+            <button type="submit" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-rose-50 hover:bg-rose-600 hover:text-white text-rose-700 border border-rose-200 font-extrabold text-sm flex items-center justify-center transition-all shadow-xs cursor-pointer" title="Refuser la clôture (Croix)">
+              ✕
+            </button>
+          </form>
+
+          <!-- Validation Cocher -->
           <form method="post" action="{{ url_for('tasks.valider_tache', id=t.id) }}">
-            <button type="submit" class="w-full min-h-[44px] px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-              Valider la clôture
-            </button>
-          </form>
-          
-          <form method="post" action="{{ url_for('tasks.refuser_tache', id=t.id) }}" class="space-y-2">
-            <label class="block text-[11px] font-bold text-rose-800 uppercase tracking-wider">Motif du refus & instructions de révision :</label>
-            <textarea name="rejection_comment" rows="3" placeholder="Rédigez ici les remarques et précisions attendues du collaborateur..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:bg-white transition-all"></textarea>
-            <button type="submit" class="w-full min-h-[44px] px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all cursor-pointer">
-              Refuser et notifier le collaborateur
+            <button type="submit" class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm flex items-center justify-center transition-all shadow-xs active:scale-95 cursor-pointer" title="Valider la clôture (Cocher)">
+              ✓
             </button>
           </form>
         </div>
-      </div>
-    {% endfor %}
-  </div>
-
-  <!-- Desktop View (>= md screens) -->
-  <div class="hidden md:block space-y-4">
-    {% for t in pending_validation %}
-      <div class="bg-white p-5 rounded-2xl border border-amber-200 shadow-xs space-y-4">
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 mb-1">
-              <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300 shrink-0">
-                Demande de clôture
-              </span>
-              <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="font-bold text-slate-900 text-base hover:text-indigo-600 transition-colors truncate">
-                {{ t.title }}
-              </a>
-            </div>
-            <p class="text-xs text-slate-500 flex items-center gap-3">
-              <span>Collaborateur : <strong class="text-slate-700">{{ t.collaborator_name or 'Non assigné' }}</strong></span>
-              <span>&bull; Projet : {{ t.project_name or '-' }}</span>
-              <span>&bull; Échéance : {{ t.due_date or '-' }}</span>
-            </p>
-          </div>
-
-          <form method="post" action="{{ url_for('tasks.valider_tache', id=t.id) }}" class="shrink-0">
-            <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all cursor-pointer">
-              Valider la clôture
-            </button>
-          </form>
-        </div>
-
-        <!-- Rejection Form with Spacious Textarea -->
-        <form method="post" action="{{ url_for('tasks.refuser_tache', id=t.id) }}" class="p-3.5 bg-rose-50/50 border border-rose-100 rounded-xl space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Motif du refus & instructions de révision pour le collaborateur :</label>
-            <span class="text-[11px] text-slate-400">Ce message sera transmis par email au collaborateur</span>
-          </div>
-          <div class="flex items-start gap-3">
-            <textarea name="rejection_comment" rows="2" placeholder="Rédigez le motif détaillé du refus et les modifications à apporter..." class="flex-1 p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all"></textarea>
-            <button type="submit" class="h-10 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all shrink-0 cursor-pointer self-end">
-              Refuser et notifier
-            </button>
-          </div>
-        </form>
       </div>
     {% endfor %}
   </div>
@@ -171,7 +124,7 @@
 <div class="mb-10 p-5 bg-white border border-slate-200/80 rounded-3xl shadow-xs">
   <div>
     <h2 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight">Mises à jour de statuts de tâches à valider</h2>
-    <p class="text-xs text-slate-500 font-medium mt-0.5">Aucune demande de clôture en attente de validation pour le moment. Dès qu'un collaborateur proposera de clôturer une tâche, elle sera soumise ici pour votre validation finale.</p>
+    <p class="text-xs text-slate-500 font-medium mt-0.5">Aucune demande de clôture en attente de validation pour le moment.</p>
   </div>
 </div>
 {% endif %}

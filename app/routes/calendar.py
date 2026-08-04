@@ -10,7 +10,7 @@ def calendrier():
 
 @calendar_bp.route('/api/calendar/events')
 def calendar_events():
-    hide_closed = request.args.get('hide_closed', '0') == '1'
+    hide_closed = request.args.get('hide_closed', '1') == '1'
     tasks = database.list_taches()
     events = []
     
@@ -25,6 +25,7 @@ def calendar_events():
             
         priority = t.get('priority', 'Normale')
         collab = t.get('collaborator_name')
+        rec_type = t.get('recurrence_type', 'Aucune')
         
         # Color coding based on status & priority
         if status in ('Terminee', 'Cloturee', 'Terminé'):
@@ -47,6 +48,7 @@ def calendar_events():
         if collab:
             title_text += f" ({collab})"
             
+        # Add primary task event
         events.append({
             'id': str(t['id']),
             'title': title_text,
@@ -62,6 +64,31 @@ def calendar_events():
                 'project': t.get('project_name') or 'Sans projet',
             }
         })
+        
+        # Project recurring task future occurrences on calendar (up to 12 occurrences)
+        if rec_type and rec_type != 'Aucune' and status not in ('Terminee', 'Cloturee', 'Terminé'):
+            curr_due = due
+            for occ in range(1, 13):
+                next_due = database.calculate_next_due_date(curr_due, rec_type)
+                if not next_due or next_due == curr_due:
+                    break
+                events.append({
+                    'id': f"{t['id']}_occ_{occ}",
+                    'title': f"[Récurrence] {title_text}",
+                    'start': next_due,
+                    'url': f"/taches/{t['id']}",
+                    'backgroundColor': '#8b5cf6', # Purple accent for projected recurrences
+                    'borderColor': '#7c3aed',
+                    'textColor': '#ffffff',
+                    'extendedProps': {
+                        'status': status,
+                        'priority': priority,
+                        'collaborator': collab or 'Non assigné',
+                        'project': t.get('project_name') or 'Sans projet',
+                        'is_recurring_projection': True,
+                    }
+                })
+                curr_due = next_due
         
     return jsonify(events)
 

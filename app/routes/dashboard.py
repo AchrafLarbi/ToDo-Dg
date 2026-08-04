@@ -13,7 +13,8 @@ def dashboard():
     today_str = today.isoformat()
     settings = database.get_settings()
     days_before = settings['reminder_days_before'] if settings else 2
-    due_soon_limit = (today + timedelta(days=days_before)).isoformat()
+    due_soon_days = max(7, days_before)
+    due_soon_limit = (today + timedelta(days=due_soon_days)).isoformat()
 
     stats = database.dashboard_stats(today_str, due_soon_limit)
     par_collab = database.stats_by_collaborateur(today_str, due_soon_limit)

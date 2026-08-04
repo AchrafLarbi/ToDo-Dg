@@ -677,7 +677,7 @@ def stats_by_collaborateur(today, due_soon_limit):
             FROM collaborators c
             INNER JOIN tasks t ON t.collaborator_id = c.id
             GROUP BY c.id, c.name
-            HAVING COUNT(t.id) > 0
+            HAVING COUNT(*) FILTER (WHERE t.status NOT IN ('Terminee','Cloturee','Terminé')) > 0
             ORDER BY c.name
             """,
             (today, today, due_soon_limit),
