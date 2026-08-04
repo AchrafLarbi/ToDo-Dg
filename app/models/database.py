@@ -605,19 +605,20 @@ def stats_by_collaborateur(today, due_soon_limit):
         cur.execute(
             """
             SELECT c.id, c.name,
-                   COUNT(*) FILTER (WHERE t.status NOT IN ('Terminee','Cloturee')) AS actives,
+                   COUNT(*) FILTER (WHERE t.status NOT IN ('Terminee','Cloturee','Terminé')) AS actives,
                    COUNT(*) FILTER (
                        WHERE t.due_date IS NOT NULL AND t.due_date < %s
-                       AND t.status NOT IN ('Terminee','Cloturee')
+                       AND t.status NOT IN ('Terminee','Cloturee','Terminé')
                    ) AS overdue,
                    COUNT(*) FILTER (
                        WHERE t.due_date IS NOT NULL AND t.due_date >= %s AND t.due_date <= %s
-                       AND t.status NOT IN ('Terminee','Cloturee')
+                       AND t.status NOT IN ('Terminee','Cloturee','Terminé')
                    ) AS due_soon,
-                   COUNT(*) FILTER (WHERE t.status IN ('Terminee','Cloturee')) AS closed
+                   COUNT(*) FILTER (WHERE t.status IN ('Terminee','Cloturee','Terminé')) AS closed
             FROM collaborators c
-            LEFT JOIN tasks t ON t.collaborator_id = c.id
+            INNER JOIN tasks t ON t.collaborator_id = c.id
             GROUP BY c.id, c.name
+            HAVING COUNT(t.id) > 0
             ORDER BY c.name
             """,
             (today, today, due_soon_limit),
