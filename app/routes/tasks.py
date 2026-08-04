@@ -200,6 +200,24 @@ def supprimer_bulk_taches():
     return redirect(url_for('tasks.taches'))
 
 
+@tasks_bp.route('/taches/<int:id>/valider', methods=['POST'])
+def valider_tache(id):
+    comment = request.form.get('closure_comment', '').strip()
+    database.approve_task_completion(id, closure_comment=comment)
+    flash('Clôture de la tâche validée avec succès par le DG.', 'success')
+    return redirect(request.referrer or url_for('dashboard.dashboard'))
+
+
+@tasks_bp.route('/taches/<int:id>/refuser', methods=['POST'])
+def refuser_tache(id):
+    comment = request.form.get('rejection_comment', '').strip()
+    database.reject_task_completion(id, rejection_comment=comment)
+    from app.services import send_rejection_notification_async
+    send_rejection_notification_async(id, rejection_comment=comment)
+    flash('Demande de révision transmise au collaborateur par email avec votre motif. La tâche reste en cours.', 'warning')
+    return redirect(request.referrer or url_for('dashboard.dashboard'))
+
+
 # ---- Vue publique collaborateur ---------------------------------------------
 
 @tasks_bp.route('/t/<token>')
@@ -224,5 +242,8 @@ def tache_publique_soumettre(token):
     comment = request.form.get('comment', '').strip()
     database.collaborator_update_tache(task['id'], new_status, new_due_date, comment)
     notify_admin_async(task['id'], new_status, new_due_date, comment)
-    flash('Votre mise à jour a été enregistrée. Merci !', 'success')
+    if new_status in ('Terminee', 'Cloturee', 'Terminé'):
+        flash('Votre demande de clôture a été transmise au DG pour validation. Merci !', 'success')
+    else:
+        flash('Votre mise à jour a été enregistrée. Merci !', 'success')
     return redirect(url_for('tasks.tache_publique', token=token))

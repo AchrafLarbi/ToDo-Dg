@@ -7,7 +7,7 @@ import psycopg2.extras
 
 PRIORITIES = ['Basse', 'Normale', 'Haute', 'Urgente']
 SENSITIVITIES = ['Faible', 'Normale', 'Elevee', 'Critique']
-STATUSES = ['A faire', 'En cours', 'Terminee', 'Cloturee']
+STATUSES = ['A faire', 'En cours', 'En attente de validation', 'Terminee', 'Cloturee']
 RECURRENCE_TYPES = [
     'Aucune',
     'Hebdomadaire',
@@ -414,24 +414,83 @@ def collaborator_update_tache(task_id, new_status, new_due_date, comment):
     with conn.cursor() as cur:
         cur.execute("SELECT status, due_date FROM tasks WHERE id = %s", (task_id,))
         current = cur.fetchone()
-        closed_at = None
+        
+        # If collaborator requests completion, route to En attente de validation for DG approval
+        target_status = new_status
         if new_status in ('Terminee', 'Cloturee', 'Terminé'):
-            import datetime as _dt
-            closed_at = _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            target_status = 'En attente de validation'
+            
         cur.execute(
-            "UPDATE tasks SET status=%s, due_date=%s, closed_at=%s WHERE id=%s",
-            (new_status, new_due_date or current['due_date'], closed_at, task_id),
+            "UPDATE tasks SET status=%s, due_date=%s WHERE id=%s",
+            (target_status, new_due_date or current['due_date'], task_id),
+        )
+        
+        log_comment = comment or None
+        if target_status == 'En attente de validation':
+            log_comment = f"⏳ Demande de clôture soumise au DG. Commentaire: {comment}" if comment else "⏳ Demande de clôture soumise au DG"
+            
+        cur.execute(
+            """INSERT INTO task_updates (task_id, previous_status, new_status, previous_due_date,
+               new_due_date, comment) VALUES (%s, %s, %s, %s, %s, %s)""",
+            (task_id, current['status'], target_status, current['due_date'],
+             new_due_date or current['due_date'], log_comment),
+        )
+    conn.commit()
+    conn.close()
+
+
+def approve_task_completion(task_id, closure_comment=None):
+    import datetime as _dt
+    closed_at = _dt.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT status, due_date FROM tasks WHERE id = %s", (task_id,))
+        current = cur.fetchone()
+        cur.execute(
+            "UPDATE tasks SET status='Cloturee', closure_comment=%s, closed_at=%s WHERE id=%s",
+            (closure_comment or 'Validé par le DG', closed_at, task_id),
         )
         cur.execute(
             """INSERT INTO task_updates (task_id, previous_status, new_status, previous_due_date,
                new_due_date, comment) VALUES (%s, %s, %s, %s, %s, %s)""",
-            (task_id, current['status'], new_status, current['due_date'],
-             new_due_date or current['due_date'], comment or None),
+            (task_id, current['status'] if current else 'En attente de validation', 'Cloturee',
+             current['due_date'] if current else None, current['due_date'] if current else None,
+             f"Clôture validée par le DG: {closure_comment}" if closure_comment else "Clôture validée par le DG"),
         )
     conn.commit()
     conn.close()
-    if new_status in ('Terminee', 'Cloturee', 'Terminé'):
-        process_task_recurrence(task_id)
+    process_task_recurrence(task_id)
+
+
+def reject_task_completion(task_id, rejection_comment=None):
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT status, due_date FROM tasks WHERE id = %s", (task_id,))
+        current = cur.fetchone()
+        cur.execute(
+            "UPDATE tasks SET status='En cours', closed_at=NULL WHERE id=%s",
+            (task_id,),
+        )
+        cur.execute(
+            """INSERT INTO task_updates (task_id, previous_status, new_status, previous_due_date,
+               new_due_date, comment) VALUES (%s, %s, %s, %s, %s, %s)""",
+            (task_id, current['status'] if current else 'En attente de validation', 'En cours',
+             current['due_date'] if current else None, current['due_date'] if current else None,
+             f"Demande de révision par le DG: {rejection_comment}" if rejection_comment else "Clôture refusée par le DG - Tâche renvoyée en cours"),
+        )
+    conn.commit()
+    conn.close()
+
+
+def list_pending_validation_tasks():
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            TASK_SELECT + " WHERE tasks.status = 'En attente de validation' ORDER BY tasks.created_at DESC"
+        )
+        rows = cur.fetchall()
+    conn.close()
+    return rows
 
 
 def calculate_next_due_date(base_date_str, recurrence_type):

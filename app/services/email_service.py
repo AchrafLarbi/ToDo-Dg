@@ -472,3 +472,74 @@ def notify_admin_of_collaborator_update(task_id, new_status, new_due_date, comme
 def notify_admin_async(task_id, new_status, new_due_date, comment):
     thread = threading.Thread(target=notify_admin_of_collaborator_update, args=(task_id, new_status, new_due_date, comment), daemon=True)
     thread.start()
+
+
+def send_rejection_notification(task_id, rejection_comment=None):
+    try:
+        task = database.get_tache(task_id)
+        if not task or not task['collaborator_email']:
+            return False, "Aucun collaborateur ou email associé à cette tâche."
+        
+        collab_name = task['collaborator_name'] or "Collaborateur"
+        link = _task_link(task)
+        motif = rejection_comment.strip() if rejection_comment and rejection_comment.strip() else "Complément d'information ou révision demandée."
+        
+        subject = f"[Refus de clôture] Révision demandée : {task['title']}"
+        
+        body = (
+            f"Bonjour {collab_name},\n\n"
+            f"REFUS DE CLÔTURE DE TÂCHE - RÉVISION DEMANDÉE\n\n"
+            f"La clôture de la tâche '{task['title']}' n'a pas été validée.\n"
+            f"La tâche a été renvoyée au statut 'En cours'.\n\n"
+            f"MOTIF DU REFUS ET INSTRUCTIONS :\n"
+            f"{motif}\n\n"
+            f"Merci de procéder aux révisions nécessaires et de mettre à jour votre tâche.\n\n"
+        )
+        if link:
+            body += f"Accéder à votre tâche : {link}\n"
+            
+        html_body = f"""
+        <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; border: 1px solid #cbd5e1; border-radius: 12px; background-color: #ffffff;">
+          <div style="background-color: #dc2626; color: #ffffff; padding: 16px 20px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Refus de clôture - Révision demandée</h2>
+          </div>
+
+          <h3 style="color: #1e293b; margin-top: 0; font-size: 17px;">Bonjour {collab_name},</h3>
+          <p style="color: #334155; font-size: 14px; line-height: 1.5;">
+            La demande de clôture pour la tâche <strong>"{task['title']}"</strong> n'a pas été validée. La tâche repasse au statut <strong>En cours</strong>.
+          </p>
+
+          <div style="background-color: #fef2f2; border: 2px solid #f87171; border-radius: 10px; padding: 18px; margin: 20px 0;">
+            <h4 style="color: #991b1b; margin: 0 0 10px 0; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">Motif du refus & instructions :</h4>
+            <p style="color: #7f1d1d; margin: 0; font-size: 14px; font-weight: 600; line-height: 1.6; white-space: pre-wrap;">{motif}</p>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <tr style="border-bottom: 1px solid #f1f5f9; background-color: #f8fafc;">
+              <td style="padding: 10px 14px; font-weight: bold; color: #475569; width: 35%;">Tâche concernée</td>
+              <td style="padding: 10px 14px; color: #0f172a; font-weight: bold;">{task['title']}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 10px 14px; font-weight: bold; color: #475569;">Projet</td>
+              <td style="padding: 10px 14px; color: #334155;">{task['project_name'] or '-'}</td>
+            </tr>
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 10px 14px; font-weight: bold; color: #475569;">Nouveau statut</td>
+              <td style="padding: 10px 14px; color: #dc2626; font-weight: bold;">En cours (Révision obligatoire)</td>
+            </tr>
+          </table>
+
+          {f'<div style="text-align: center; margin-top: 24px;"><a href="{link}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; font-size: 14px;">Accéder à votre tâche pour la mettre à jour</a></div>' if link else ''}
+        </div>
+        """
+        success, message = _send_raw(task['collaborator_email'], subject, body, html_body)
+        database.log_reminder(task_id, 'refus_dg', success, message)
+        return success, message
+    except Exception as exc:
+        logger.exception("Échec de la notification de refus pour la tâche %s", task_id)
+        return False, str(exc)
+
+
+def send_rejection_notification_async(task_id, rejection_comment=None):
+    thread = threading.Thread(target=send_rejection_notification, args=(task_id, rejection_comment), daemon=True)
+    thread.start()

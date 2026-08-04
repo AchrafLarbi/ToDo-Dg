@@ -26,6 +26,30 @@
   </a>
 </div>
 
+{% if task.status == 'En attente de validation' %}
+<!-- Approval Banner -->
+<div class="bg-white rounded-2xl p-5 border-2 border-amber-300 shadow-sm mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+  <div>
+    <h3 class="text-sm font-extrabold text-amber-900 uppercase tracking-wider">
+      Clôture soumise en attente de validation
+    </h3>
+    <p class="text-xs text-slate-700 mt-1">Le collaborateur <strong>{{ task.collaborator_name or 'assigné' }}</strong> a soumis la fin de cette tâche. Confirmez la clôture ou renvoyez-la pour révision.</p>
+  </div>
+  <div class="flex items-center gap-2 w-full sm:w-auto">
+    <form method="post" action="{{ url_for('tasks.refuser_tache', id=task.id) }}" class="flex-1 sm:flex-initial">
+      <button type="submit" class="w-full px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all cursor-pointer">
+        Refuser
+      </button>
+    </form>
+    <form method="post" action="{{ url_for('tasks.valider_tache', id=task.id) }}" class="flex-1 sm:flex-initial">
+      <button type="submit" class="w-full px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer">
+        Valider la clôture
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
 {% if task.status in ['Terminee', 'Cloturee', 'Terminé'] and task.closed_at %}
 <!-- Realization Date Highlight Card -->
 <div class="bg-emerald-50/80 rounded-2xl p-5 border border-emerald-200/80 shadow-sm mb-6 flex flex-wrap items-center justify-between gap-4">

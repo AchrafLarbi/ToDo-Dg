@@ -19,6 +19,7 @@ def dashboard():
     par_collab = database.stats_by_collaborateur(today_str, due_soon_limit)
     overdue = database.overdue_tasks(today_str)
     due_soon = database.due_soon_tasks(today_str, due_soon_limit)
+    pending_validation = database.list_pending_validation_tasks()
 
     return render_template(
         'dashboard/dashboard.html',
@@ -26,6 +27,7 @@ def dashboard():
         par_collaborateur=par_collab,
         overdue=overdue,
         due_soon=due_soon,
+        pending_validation=pending_validation,
         today=today_str,
     )
 
