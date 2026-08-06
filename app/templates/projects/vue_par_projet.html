@@ -1,0 +1,383 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div>
+    <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Vue par Projet & Statistiques</h1>
+    <p class="text-slate-500 text-sm mt-1">Suivi chronologique des tâches, classement des retards et statistiques dédiées par projet.</p>
+  </div>
+  
+  <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+    <!-- Download Template Button -->
+    <a href="{{ url_for('projects.modele_excel') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs sm:text-sm rounded-xl border border-slate-200 transition-all cursor-pointer">
+      <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+      Télécharger Modèle Excel (.xlsx)
+    </a>
+
+    <!-- Excel Import Modal Button -->
+    <button type="button" onclick="document.getElementById('excelModal').classList.remove('hidden')" class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm rounded-xl shadow-sm transition-all cursor-pointer">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+      Importer Fichier Excel / CSV
+    </button>
+  </div>
+</div>
+
+<!-- Section 1: Global Analytics & Ranking of Delayed Projects -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+  <!-- General Stats Summary Cards -->
+  <div class="space-y-4">
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Nombre de Projets</span>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1">{{ analytics.total_projects }}</div>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Tâches des Projets</span>
+        <div class="text-3xl font-extrabold text-slate-900 mt-1">{{ analytics.total_project_tasks }}</div>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-2xl border border-rose-200 shadow-xs flex items-center justify-between">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-rose-600">Total Tâches en Retard</span>
+        <div class="text-3xl font-extrabold text-rose-600 mt-1">{{ analytics.total_overdue }}</div>
+      </div>
+      <div class="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delays Ranking Table (Classement des projets présentant le plus de retards) -->
+  <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+    <div>
+      <div class="flex items-center justify-between gap-2 mb-4">
+        <h2 class="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+          Classement des Projets présentant le plus de retards
+        </h2>
+        <span class="text-xs text-slate-400 font-medium">Trier par retards</span>
+      </div>
+
+      <!-- Mobile Native Cards View (< md) -->
+      <div class="space-y-3 md:hidden">
+        {% for pr in analytics.project_ranking %}
+          <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5 {{ 'border-l-4 border-l-rose-500 bg-rose-50/20' if pr.overdue > 0 else '' }}">
+            <div class="flex items-start justify-between gap-2">
+              <a href="{{ url_for('projects.vue_par_projet', project_id=pr.id) }}" class="font-extrabold text-slate-900 text-sm hover:text-indigo-600 transition-colors leading-snug">
+                {{ pr.name }}
+              </a>
+              <a href="{{ url_for('projects.vue_par_projet', project_id=pr.id) }}" class="shrink-0 px-3 py-1 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow-xs active:scale-95 transition-all">
+                Examiner
+              </a>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="bg-white p-2 rounded-xl border border-slate-200/60">
+                <span class="block text-[10px] font-semibold text-slate-400 uppercase">Totales</span>
+                <strong class="text-slate-900 font-extrabold text-sm">{{ pr.total_tasks }}</strong>
+              </div>
+              <div class="bg-white p-2 rounded-xl border {{ 'border-rose-200 bg-rose-50/50' if pr.overdue > 0 else 'border-slate-200/60' }}">
+                <span class="block text-[10px] font-bold {{ 'text-rose-600' if pr.overdue > 0 else 'text-slate-400' }} uppercase">En Retard</span>
+                <strong class="font-extrabold text-sm {{ 'text-rose-600' if pr.overdue > 0 else 'text-slate-500' }}">{{ pr.overdue }}</strong>
+              </div>
+              <div class="bg-white p-2 rounded-xl border border-slate-200/60">
+                <span class="block text-[10px] font-semibold text-emerald-600 uppercase">Terminées</span>
+                <strong class="text-emerald-700 font-extrabold text-sm">{{ pr.closed }}</strong>
+              </div>
+            </div>
+          </div>
+        {% else %}
+          <div class="py-4 text-center text-slate-400 text-xs">Aucun projet trouvé.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Desktop Table View (>= md) -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 border-b border-slate-200 font-bold text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="px-3 py-2.5">Projet</th>
+              <th class="px-3 py-2.5 text-center">Tâches Totales</th>
+              <th class="px-3 py-2.5 text-center text-rose-600">En Retard</th>
+              <th class="px-3 py-2.5 text-center text-emerald-600">Terminées</th>
+              <th class="px-3 py-2.5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium">
+            {% for pr in analytics.project_ranking %}
+              <tr class="hover:bg-slate-50 transition-colors {{ 'bg-rose-50/40' if pr.overdue > 0 else '' }}">
+                <td class="px-3 py-2.5 font-bold text-slate-900">
+                  <a href="{{ url_for('projects.vue_par_projet', project_id=pr.id) }}" class="hover:text-indigo-600 transition-colors">
+                    {{ pr.name }}
+                  </a>
+                </td>
+                <td class="px-3 py-2.5 text-center font-bold text-slate-700">{{ pr.total_tasks }}</td>
+                <td class="px-3 py-2.5 text-center font-extrabold {{ 'text-rose-600' if pr.overdue > 0 else 'text-slate-400' }}">
+                  {{ pr.overdue }}
+                </td>
+                <td class="px-3 py-2.5 text-center font-semibold text-emerald-600">{{ pr.closed }}</td>
+                <td class="px-3 py-2.5 text-right">
+                  <a href="{{ url_for('projects.vue_par_projet', project_id=pr.id) }}" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-[11px] font-bold transition-colors">
+                    Sélectionner
+                  </a>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="5" class="py-4 text-center text-slate-400">Aucun projet trouvé.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Section 2: Project Selector Header & Mobile Swipeable Bar -->
+<div class="bg-white p-5 rounded-3xl border border-slate-200/80 shadow-xs mb-8 space-y-4">
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Sélectionner un projet à examiner :</label>
+      <select onchange="window.location.href='/projets/vue?project_id=' + this.value" class="w-full sm:w-80 px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer">
+        {% for p in projets %}
+          <option value="{{ p.id }}" {{ 'selected' if selected_project and selected_project.id == p.id }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    {% if selected_project %}
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('projects.detail_projet', id=selected_project.id) }}" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors">
+        Fiche du projet &rarr;
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Swipeable Horizontal Project Pills for Mobile Touch (1-tap switching) -->
+  <div class="pt-2 border-t border-slate-100">
+    <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Accès rapide 1-Tap (Accès tactile mobile) :</span>
+    <div class="flex items-center gap-2 overflow-x-auto pb-2 scroll-smooth select-none">
+      {% for p in projets %}
+        <a href="/projets/vue?project_id={{ p.id }}" class="shrink-0 px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 {{ 'bg-indigo-600 text-white shadow-sm scale-[1.02]' if selected_project and selected_project.id == p.id else 'bg-slate-100 hover:bg-slate-200 text-slate-700' }}">
+          <span>{{ p.name }}</span>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% if selected_project %}
+<!-- Section 3: Selected Project Specific Analytics & Details -->
+<div class="bg-white rounded-3xl border border-indigo-200/80 p-6 shadow-sm mb-8">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
+    <div>
+      <div class="flex items-center gap-2">
+        <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{{ selected_project.name }}</h2>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">
+          {{ selected_project.status }}
+        </span>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">{{ selected_project.description or 'Aucune description' }}</p>
+    </div>
+
+    <!-- Completion Rate Progress Bar -->
+    <div class="w-full md:w-64 bg-slate-50 p-3 rounded-2xl border border-slate-200/80">
+      <div class="flex justify-between items-center text-xs mb-1.5">
+        <span class="font-bold text-slate-700">Taux d'avancement</span>
+        <span class="font-extrabold text-indigo-600">{{ project_stats.completion_pct }}%</span>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+        <div class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500" style="width: {{ project_stats.completion_pct }}%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Project Specific Metrics -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-center">
+      <span class="text-[11px] font-semibold text-slate-500 uppercase">Tâches totales</span>
+      <div class="text-xl font-extrabold text-slate-900 mt-0.5">{{ project_stats.total }}</div>
+    </div>
+    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-center">
+      <span class="text-[11px] font-semibold text-indigo-600 uppercase">En cours</span>
+      <div class="text-xl font-extrabold text-indigo-600 mt-0.5">{{ project_stats.actives }}</div>
+    </div>
+    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-center">
+      <span class="text-[11px] font-semibold text-rose-600 uppercase">En retard</span>
+      <div class="text-xl font-extrabold text-rose-600 mt-0.5">{{ project_stats.overdue }}</div>
+    </div>
+    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 text-center">
+      <span class="text-[11px] font-semibold text-emerald-600 uppercase">Clôturées</span>
+      <div class="text-xl font-extrabold text-emerald-600 mt-0.5">{{ project_stats.closed }}</div>
+    </div>
+  </div>
+
+  <!-- Chronological Tasks Timeline -->
+  <h3 class="text-base font-extrabold text-slate-900 mb-4 flex items-center gap-2">
+    <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+    Tâches du projet classées par ordre chronologique d'échéance
+  </h3>
+
+  {% if project_tasks %}
+    <!-- Mobile Native Cards View (< md) -->
+    <div class="space-y-3 md:hidden mb-4">
+      {% for t in project_tasks %}
+        <div class="bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs space-y-2 {{ 'border-l-4 border-l-rose-500 bg-rose-50/20' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+          <div class="flex items-start justify-between gap-2">
+            <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="font-bold text-slate-900 text-sm hover:text-indigo-600 transition-colors leading-tight">
+              {{ t.title }}
+            </a>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 {{ 'bg-emerald-100 text-emerald-800' if t.status in ['Terminee','Cloturee','Terminé'] else ('bg-amber-100 text-amber-900' if t.status == 'En attente de validation' else 'bg-indigo-100 text-indigo-800') }}">
+              {{ t.status }}
+            </span>
+          </div>
+
+          <div class="text-xs text-slate-600 space-y-1">
+            <div>Collaborateur : <strong class="text-slate-900">{{ t.collaborator_name or 'Non assigné' }}</strong></div>
+            <div>Échéance prévue : 
+              {% if t.due_date %}
+                <span class="font-bold {{ 'text-rose-600' if t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else 'text-slate-900' }}">{{ t.due_date }}</span>
+                {% if t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] %}
+                  <span class="text-[10px] font-bold text-rose-700 bg-rose-100 px-1.5 py-0.5 rounded-md ml-1">En retard</span>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-400">Non définie</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Desktop Chronological Table (>= md) -->
+    <div class="hidden md:block bg-white rounded-2xl border border-slate-200/80 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm text-slate-600">
+          <thead class="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <tr>
+              <th class="px-6 py-3.5">Échéance Prévue</th>
+              <th class="px-6 py-3.5">Titre de la tâche</th>
+              <th class="px-6 py-3.5">Collaborateur</th>
+              <th class="px-6 py-3.5">Statut / Situation</th>
+              <th class="px-6 py-3.5 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium">
+            {% for t in project_tasks %}
+              <tr class="hover:bg-slate-50/80 transition-colors {{ 'bg-rose-50/30' if t.due_date and t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else '' }}">
+                <td class="px-6 py-4 font-bold text-xs whitespace-nowrap">
+                  {% if t.due_date %}
+                    <span class="{{ 'text-rose-600 font-extrabold' if t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] else 'text-slate-900' }}">
+                      {{ t.due_date }}
+                    </span>
+                    {% if t.due_date < today and t.status not in ['Terminee','Cloturee','Terminé'] %}
+                      <span class="ml-1.5 px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">En retard</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-slate-400 italic">Non définie</span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 font-bold text-slate-900">
+                  <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="hover:text-indigo-600 transition-colors">
+                    {{ t.title }}
+                  </a>
+                </td>
+                <td class="px-6 py-4 text-xs font-semibold text-slate-700">
+                  {{ t.collaborator_name or 'Non assigné' }}
+                </td>
+                <td class="px-6 py-4">
+                  {% if t.status in ['Terminee','Cloturee','Terminé'] %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Clôturée {{ '(' + t.closed_at + ')' if t.closed_at else '' }}
+                    </span>
+                  {% elif t.status == 'En attente de validation' %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
+                      En attente de validation
+                    </span>
+                  {% elif t.due_date and t.due_date < today %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-rose-100 text-rose-800 border border-rose-300">
+                      En retard
+                    </span>
+                  {% else %}
+                    <span class="px-2.5 py-1 rounded-full text-xs font-extrabold bg-indigo-100 text-indigo-800 border border-indigo-200">
+                      En cours
+                    </span>
+                  {% endif %}
+                </td>
+                <td class="px-6 py-4 text-right">
+                  <a href="{{ url_for('tasks.detail_tache', id=t.id) }}" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors">
+                    Voir détails
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% else %}
+    <div class="p-8 text-center bg-slate-50 rounded-2xl border border-slate-200 text-slate-500 text-sm">
+      Aucune tâche associée à ce projet pour le moment.
+    </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- Excel Import Modal -->
+<div id="excelModal" class="fixed inset-0 z-50 hidden bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+    <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+      <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+        <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        Importer des Tâches depuis un Excel / CSV
+      </h3>
+      <button type="button" onclick="document.getElementById('excelModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <form method="post" action="{{ url_for('projects.importer_excel') }}" enctype="multipart/form-data" class="space-y-4">
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-2">
+        <div class="font-bold text-slate-900">Format des colonnes supporté dans votre fichier :</div>
+        <div>&bull; <strong class="text-slate-800">projet</strong> : Nom du projet (ex. Rapport Annuel)</div>
+        <div>&bull; <strong class="text-slate-800">taches</strong> : Titre de la tâche</div>
+        <div>&bull; <strong class="text-slate-800">responsable</strong> : Nom ou email du collaborateur</div>
+        <div>&bull; <strong class="text-slate-800">echeances</strong> : Date au format YYYY-MM-DD ou DD/MM/YYYY</div>
+        <div class="pt-1">
+          <a href="{{ url_for('projects.modele_excel') }}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] rounded-lg shadow-2xs transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            Télécharger le fichier modèle (.xlsx)
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Fichier Excel (.xlsx, .xls) ou CSV :</label>
+        <input type="file" name="file" accept=".xlsx,.xls,.csv" required class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+      </div>
+
+      <div class="flex items-center justify-end gap-3 pt-3">
+        <button type="button" onclick="document.getElementById('excelModal').classList.add('hidden')" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors">
+          Annuler
+        </button>
+        <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer">
+          Lancer l'importation
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

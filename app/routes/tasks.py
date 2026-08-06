@@ -83,19 +83,28 @@ def ajouter_tache():
     if not title:
         flash('Le titre de la tâche est obligatoire.', 'danger')
         return redirect(url_for('tasks.taches'))
-    task_id = database.create_tache(
+        
+    collaborator_ids = request.form.getlist('collaborator_ids') or request.form.getlist('collaborator_id')
+    created_ids = database.create_taches_multi(
         title=title,
         description=request.form.get('description', '').strip(),
         project_id=int(request.form['project_id']) if request.form.get('project_id') else None,
-        collaborator_id=int(request.form['collaborator_id']) if request.form.get('collaborator_id') else None,
+        collaborator_ids=collaborator_ids,
         priority=request.form.get('priority', 'Normale'),
         sensitivity=request.form.get('sensitivity', 'Normale'),
         due_date=request.form.get('due_date', '').strip(),
         recurrence_type=request.form.get('recurrence_type', 'Aucune'),
     )
-    send_task_notification_async(task_id)
-    flash('Tâche créée.', 'success')
-    return redirect(url_for('tasks.taches'))
+    
+    for tid in created_ids:
+        send_task_notification_async(tid)
+        
+    if len(created_ids) > 1:
+        flash(f"Tâche créée et attribuée simultanément à {len(created_ids)} collaborateurs par email.", 'success')
+    else:
+        flash('Tâche créée avec succès.', 'success')
+        
+    return redirect(request.referrer or url_for('tasks.taches'))
 
 @tasks_bp.route('/taches/<int:id>')
 def detail_tache(id):
@@ -106,10 +115,15 @@ def detail_tache(id):
     settings = database.get_settings()
     base_url = (settings.get('base_url') or 'http://197.140.9.176').rstrip('/')
     task_url = f"{base_url}/t/{task['update_token']}" if task.get('update_token') else None
+    
+    sibling_tasks = []
+    if task.get('group_token'):
+        sibling_tasks = database.list_sibling_tasks(task['group_token'], exclude_task_id=id)
+
     return render_template(
         'tasks/tache_detail.html',
         task=task,
-        task_url=task_url,
+        sibling_tasks=sibling_tasks,
         projets=database.list_projets(),
         collaborateurs=database.list_collaborateurs(),
         reminders=database.list_reminders(id),
@@ -118,7 +132,7 @@ def detail_tache(id):
         SENSITIVITIES=SENSITIVITIES,
         STATUSES=STATUSES,
         RECURRENCE_TYPES=RECURRENCE_TYPES,
-        deadline_badge=deadline_badge,
+        task_url=task_url,
     )
 
 @tasks_bp.route('/taches/<int:id>/modifier', methods=['POST'])

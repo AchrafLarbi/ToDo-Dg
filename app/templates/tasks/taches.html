@@ -33,22 +33,36 @@
       <input type="text" name="title" required placeholder="Ex. Préparer la présentation pour le client" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
     </div>
     
+    <!-- Multi-Collaborator Assignment Component -->
+    <div class="md:col-span-2 lg:col-span-3 mb-1">
+      <div class="flex items-center justify-between mb-1.5">
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+          Collaborateurs assignés (Attribution simultanée multiple)
+        </label>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="toggleAllCollabs(this, true)" class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors">Tout sélectionner</button>
+          <span class="text-slate-300">|</span>
+          <button type="button" onclick="toggleAllCollabs(this, false)" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 transition-colors">Réinitialiser</button>
+        </div>
+      </div>
+
+      <div class="collab-selector-container bg-slate-50 border border-slate-200 rounded-2xl p-3 max-h-48 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+        {% for c in collaborateurs %}
+          <label class="flex items-center gap-2.5 p-2 bg-white rounded-xl border border-slate-200/80 hover:border-indigo-300 hover:bg-indigo-50/40 cursor-pointer transition-all select-none group">
+            <input type="checkbox" name="collaborator_ids" value="{{ c.id }}" class="collab-checkbox w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500 shrink-0">
+            <span class="text-xs font-semibold text-slate-800 group-hover:text-indigo-900 truncate">{{ c.name }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <p class="text-[11px] text-slate-400 mt-1 font-medium">💡 Cochez un ou plusieurs collaborateurs. Une tâche individuelle sera générée et notifiée à chacun.</p>
+    </div>
+
     <div>
       <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Projet</label>
       <select name="project_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
         <option value="">-- Aucun --</option>
         {% for p in projets %}
           <option value="{{ p.id }}">{{ p.name }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Collaborateur assigné</label>
-      <select name="collaborator_id" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
-        <option value="">-- Non assigné --</option>
-        {% for c in collaborateurs %}
-          <option value="{{ c.id }}">{{ c.name }}</option>
         {% endfor %}
       </select>
     </div>
@@ -307,6 +321,13 @@
 
 
 <script>
+  function toggleAllCollabs(btn, checkState) {
+    const form = btn.closest('form');
+    if (!form) return;
+    const checkboxes = form.querySelectorAll('.collab-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkState);
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     const selectAll = document.getElementById('select-all-tasks');
     const taskCheckboxes = document.querySelectorAll('.task-checkbox');
@@ -329,7 +350,6 @@
     if (selectAll) {
       selectAll.addEventListener('change', function() {
         taskCheckboxes.forEach(cb => {
-          // Only check visible tasks if filtered
           const tr = cb.closest('tr');
           if (!tr || tr.style.display !== 'none') {
             cb.checked = selectAll.checked;

@@ -113,6 +113,8 @@ def init_db():
         cur.execute(SCHEMA)
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS sender_email TEXT")
         cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS recurrence_type TEXT DEFAULT 'Aucune'")
+        cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS group_token TEXT")
+        cur.execute("ALTER TABLE tasks ADD COLUMN IF NOT EXISTS parent_task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL")
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_sender_phone TEXT")
         cur.execute("ALTER TABLE settings ADD COLUMN IF NOT EXISTS whatsapp_country_code TEXT DEFAULT '213'")
         cur.execute("INSERT INTO settings (id, smtp_host, smtp_port, smtp_user, smtp_password, sender_email) VALUES (1, 'mail.amimer.com', 465, 'pda@amimer.com', 'RZ{M9q*n+jz3grt[', 'pda@amimer.com') ON CONFLICT (id) DO NOTHING")
@@ -268,6 +270,103 @@ def delete_projet(project_id):
     conn.close()
 
 
+def get_projects_analytics(today):
+    """Calculates global project statistics, task breakdown per project, and delays ranking."""
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT p.id, p.name, p.status AS project_status, p.deadline,
+                   COUNT(t.id) AS total_tasks,
+                   COUNT(t.id) FILTER (WHERE t.status NOT IN ('Terminee','Cloturee','Terminé')) AS actives,
+                   COUNT(t.id) FILTER (
+                       WHERE t.due_date IS NOT NULL AND t.due_date < %s
+                       AND t.status NOT IN ('Terminee','Cloturee','Terminé')
+                   ) AS overdue,
+                   COUNT(t.id) FILTER (
+                       WHERE t.due_date IS NOT NULL AND t.due_date >= %s
+                       AND t.status NOT IN ('Terminee','Cloturee','Terminé')
+                   ) AS pending_due,
+                   COUNT(t.id) FILTER (WHERE t.status IN ('Terminee','Cloturee','Terminé')) AS closed
+            FROM projects p
+            LEFT JOIN tasks t ON t.project_id = p.id
+            GROUP BY p.id, p.name, p.status, p.deadline
+            ORDER BY overdue DESC, total_tasks DESC, p.name ASC
+            """,
+            (today, today),
+        )
+        project_ranking = cur.fetchall()
+
+        cur.execute("SELECT COUNT(*) AS total_projects FROM projects")
+        total_projects = cur.fetchone()['total_projects']
+
+        cur.execute("SELECT COUNT(*) AS total_tasks FROM tasks WHERE project_id IS NOT NULL")
+        total_project_tasks = cur.fetchone()['total_tasks']
+
+        cur.execute(
+            "SELECT COUNT(*) AS overdue_tasks FROM tasks WHERE project_id IS NOT NULL "
+            "AND due_date IS NOT NULL AND due_date < %s AND status NOT IN ('Terminee','Cloturee','Terminé')",
+            (today,),
+        )
+        total_overdue = cur.fetchone()['overdue_tasks']
+
+    conn.close()
+
+    return {
+        'total_projects': total_projects,
+        'total_project_tasks': total_project_tasks,
+        'total_overdue': total_overdue,
+        'project_ranking': project_ranking,
+    }
+
+
+def find_or_create_project_by_name(project_name):
+    """Finds an existing project by case-insensitive name, or creates a new project."""
+    if not project_name or not str(project_name).strip():
+        return None
+    pname = str(project_name).strip()
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM projects WHERE LOWER(name) = LOWER(%s)", (pname,))
+        row = cur.fetchone()
+        if row:
+            pid = row['id']
+            conn.close()
+            return pid
+        cur.execute(
+            "INSERT INTO projects (name, status) VALUES (%s, %s) RETURNING id",
+            (pname, 'En cours'),
+        )
+        pid = cur.fetchone()['id']
+    conn.commit()
+    conn.close()
+    return pid
+
+
+def find_or_create_collaborator_by_name_or_email(name_or_email):
+    """Finds an existing collaborator by name or email, or creates a new one."""
+    if not name_or_email or not str(name_or_email).strip():
+        return None
+    val = str(name_or_email).strip()
+    conn = get_db()
+    with conn.cursor() as cur:
+        cur.execute("SELECT id FROM collaborators WHERE LOWER(name) = LOWER(%s) OR LOWER(email) = LOWER(%s)", (val, val))
+        row = cur.fetchone()
+        if row:
+            cid = row['id']
+            conn.close()
+            return cid
+        email = val if '@' in val else f"{val.lower().replace(' ', '.')}@amimer.com"
+        cur.execute(
+            "INSERT INTO collaborators (name, email) VALUES (%s, %s) RETURNING id",
+            (val, email),
+        )
+        cid = cur.fetchone()['id']
+    conn.commit()
+    conn.close()
+    return cid
+
+
 # ---- Taches -------------------------------------------------------------------
 
 TASK_SELECT = """
@@ -373,6 +472,73 @@ def create_tache(title, description, project_id, collaborator_id, priority, sens
     conn.commit()
     conn.close()
     return new_id
+
+
+def create_taches_multi(title, description, project_id, collaborator_ids, priority, sensitivity, due_date, recurrence_type='Aucune'):
+    if not collaborator_ids:
+        tid = create_tache(title, description, project_id, None, priority, sensitivity, due_date, recurrence_type)
+        return [tid]
+
+    clean_ids = []
+    for cid in collaborator_ids:
+        if cid:
+            try:
+                val = int(cid)
+                if val not in clean_ids:
+                    clean_ids.append(val)
+            except (ValueError, TypeError):
+                pass
+
+    if not clean_ids:
+        tid = create_tache(title, description, project_id, None, priority, sensitivity, due_date, recurrence_type)
+        return [tid]
+
+    if len(clean_ids) == 1:
+        tid = create_tache(title, description, project_id, clean_ids[0], priority, sensitivity, due_date, recurrence_type)
+        return [tid]
+
+    group_token = secrets.token_urlsafe(16)
+    created_task_ids = []
+    parent_id = None
+
+    conn = get_db()
+    with conn.cursor() as cur:
+        for idx, cid in enumerate(clean_ids):
+            token = secrets.token_urlsafe(32)
+            cur.execute(
+                """INSERT INTO tasks (title, description, project_id, collaborator_id, priority,
+                   sensitivity, due_date, update_token, recurrence_type, group_token, parent_task_id)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""",
+                (title, description or None, project_id or None, cid,
+                 priority, sensitivity, due_date or None, token, recurrence_type or 'Aucune',
+                 group_token, parent_id),
+            )
+            new_id = cur.fetchone()['id']
+            if idx == 0:
+                parent_id = new_id
+                cur.execute("UPDATE tasks SET parent_task_id = %s WHERE id = %s", (parent_id, parent_id))
+            created_task_ids.append(new_id)
+
+    conn.commit()
+    conn.close()
+    return created_task_ids
+
+
+def list_sibling_tasks(group_token, exclude_task_id=None):
+    if not group_token:
+        return []
+    conn = get_db()
+    with conn.cursor() as cur:
+        query = TASK_SELECT + " WHERE tasks.group_token = %s"
+        params = [group_token]
+        if exclude_task_id:
+            query += " AND tasks.id != %s"
+            params.append(exclude_task_id)
+        query += " ORDER BY tasks.id ASC"
+        cur.execute(query, params)
+        rows = cur.fetchall()
+    conn.close()
+    return rows
 
 
 def update_tache(task_id, title, description, project_id, collaborator_id, priority, sensitivity, due_date, recurrence_type='Aucune'):
